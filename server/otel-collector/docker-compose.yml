@@ -1,0 +1,17 @@
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.155.0
+    container_name: zbx-otel-collector
+    restart: unless-stopped
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./config.yaml:/etc/otel-collector-config.yaml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC - Collectors dos cores/proxies/DB nodes enviam aqui
+      - "4318:4318"   # OTLP HTTP
+    networks:
+      - zbx-observability-net
+
+networks:
+  zbx-observability-net:
+    external: true

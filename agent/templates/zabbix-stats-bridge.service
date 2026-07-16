@@ -1,0 +1,19 @@
+[Unit]
+Description=Zabbix Stats Bridge (zabbix.stats -> Prometheus)
+After=network.target zabbix-server.service zabbix-proxy.service
+Wants=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/zabbix-stats-bridge.py --zabbix-host 127.0.0.1 --zabbix-port __ZABBIX_PORT__ --listen-port __BRIDGE_PORT__ --role __ROLE__ --node-name __NODE_NAME__
+Restart=always
+RestartSec=5
+User=zabbix
+Group=zabbix
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

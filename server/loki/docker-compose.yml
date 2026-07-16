@@ -1,0 +1,19 @@
+services:
+  loki:
+    image: grafana/loki:3.7.3
+    container_name: zbx-loki
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/loki-config.yaml"]
+    volumes:
+      - ./loki-config.yaml:/etc/loki/loki-config.yaml:ro
+      - loki-data:/loki
+    networks:
+      - zbx-observability-net
+    # Sem "ports": só acessível dentro da rede docker (otel-collector e grafana)
+
+networks:
+  zbx-observability-net:
+    external: true
+
+volumes:
+  loki-data:

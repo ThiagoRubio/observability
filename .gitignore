@@ -1,0 +1,15 @@
+# Segredos e configs locais - nunca commitar
+*.env
+.env.*
+**/grafana-data/
+**/prometheus-data/
+**/loki-data/
+
+# Sistema
+.DS_Store
+*.swp
+__pycache__/
+*.pyc
+
+# Editor
+.vscode/settings.json

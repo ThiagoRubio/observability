@@ -1,0 +1,13 @@
+[Unit]
+Description=OpenTelemetry Collector (agent - Zabbix observability)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/otelcol-contrib --config=/etc/otelcol-agent/config.yaml
+Restart=always
+RestartSec=5
+User=root
+
+[Install]
+WantedBy=multi-user.target
