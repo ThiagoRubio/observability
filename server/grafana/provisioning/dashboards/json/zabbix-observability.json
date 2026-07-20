@@ -841,10 +841,153 @@
       }
     },
     {
+      "id": 32,
+      "type": "row",
+      "title": "php-fpm",
+      "gridPos": { "x": 0, "y": 77, "w": 24, "h": 1 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 33,
+      "type": "timeseries",
+      "title": "php-fpm - processos (ativos / idle / total)",
+      "gridPos": { "x": 0, "y": 78, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "phpfpm_active_processes{zbx_role=\"web\", zbx_node=~\"$node\", zbx_node!=\"\"}",
+          "refId": "A",
+          "legendFormat": "{{zbx_node}} - ativos"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "phpfpm_idle_processes{zbx_role=\"web\", zbx_node=~\"$node\", zbx_node!=\"\"}",
+          "refId": "B",
+          "legendFormat": "{{zbx_node}} - idle"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "phpfpm_total_processes{zbx_role=\"web\", zbx_node=~\"$node\", zbx_node!=\"\"}",
+          "refId": "C",
+          "legendFormat": "{{zbx_node}} - total"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": true,
+            "stacking": { "mode": "none", "group": "A" }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      }
+    },
+    {
+      "id": 34,
+      "type": "timeseries",
+      "title": "php-fpm - fila de listen",
+      "description": "phpfpm_listen_queue: conexoes esperando um worker livre. Consistentemente > 0 = pm.max_children baixo.",
+      "gridPos": { "x": 12, "y": 78, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "phpfpm_listen_queue{zbx_role=\"web\", zbx_node=~\"$node\", zbx_node!=\"\"}",
+          "refId": "A",
+          "legendFormat": "{{zbx_node}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": true,
+            "stacking": { "mode": "none", "group": "A" }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      }
+    },
+    {
+      "id": 35,
+      "type": "timeseries",
+      "title": "php-fpm - slow requests (taxa)",
+      "description": "rate de phpfpm_slow_requests_total: requisicoes que passaram de request_slowlog_timeout.",
+      "gridPos": { "x": 0, "y": 86, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "rate(phpfpm_slow_requests_total{zbx_role=\"web\", zbx_node=~\"$node\", zbx_node!=\"\"}[$__rate_interval])",
+          "refId": "A",
+          "legendFormat": "{{zbx_node}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": true,
+            "stacking": { "mode": "none", "group": "A" }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      }
+    },
+    {
+      "id": 36,
+      "type": "timeseries",
+      "title": "php-fpm - max children reached (taxa)",
+      "description": "Cada incremento = o pool bateu em pm.max_children e teve que enfileirar. Recorrente = aumentar max_children.",
+      "gridPos": { "x": 12, "y": 86, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "rate(phpfpm_max_children_reached_total{zbx_role=\"web\", zbx_node=~\"$node\", zbx_node!=\"\"}[$__rate_interval])",
+          "refId": "A",
+          "legendFormat": "{{zbx_node}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": true,
+            "stacking": { "mode": "none", "group": "A" }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      }
+    },
+    {
       "id": 30,
       "type": "row",
       "title": "Logs ao vivo (Loki)",
-      "gridPos": { "x": 0, "y": 77, "w": 24, "h": 1 },
+      "gridPos": { "x": 0, "y": 94, "w": 24, "h": 1 },
       "collapsed": false,
       "panels": []
     },
@@ -853,7 +996,7 @@
       "type": "logs",
       "title": "Logs - zabbix / nginx / php-fpm (filtrado por no e papel)",
       "description": "Logs coletados via filelog e enviados ao Loki. Filtra por zbx_node/zbx_role (structured metadata). Clique numa linha para ver o log_file_path (origem) e o nivel.",
-      "gridPos": { "x": 0, "y": 78, "w": 24, "h": 12 },
+      "gridPos": { "x": 0, "y": 95, "w": 24, "h": 12 },
       "datasource": { "type": "loki", "uid": "loki" },
       "targets": [
         {
@@ -878,7 +1021,7 @@
       "id": 23,
       "type": "row",
       "title": "Pendente Fase 2 (Zabbix API)",
-      "gridPos": { "x": 0, "y": 90, "w": 24, "h": 1 },
+      "gridPos": { "x": 0, "y": 107, "w": 24, "h": 1 },
       "collapsed": false,
       "panels": []
     },
@@ -886,7 +1029,7 @@
       "id": 24,
       "type": "text",
       "title": "Metricas que dependem do zabbix-api-bridge (nao implementado)",
-      "gridPos": { "x": 0, "y": 91, "w": 24, "h": 4 },
+      "gridPos": { "x": 0, "y": 108, "w": 24, "h": 4 },
       "options": {
         "mode": "markdown",
         "content": "**Estas metricas nao existem no protocolo `zabbix.stats`** e por isso nao aparecem aqui. Elas sao itens internos do Zabbix, acessiveis somente via **Zabbix API** — dependem do `zabbix-api-bridge.py` (Fase 2 do design doc), ainda nao implementado:\n\n- `zabbix[queue]` — fila de itens atrasados\n- `zabbix[proxy_buffer,*]` — estado do buffer dos proxies (Zabbix 7.0+)\n- `zabbix[vps,written]` — valores gravados por segundo (throughput)\n\nQuando o bridge de API existir, esta secao vira paineis de fila, proxy buffer e VPS. Os **logs** de nginx/php-fpm (role web) sao coletados e vao para o **Loki** — um painel de logs ao vivo esta pendente (falta confirmar os labels no Loki)."
