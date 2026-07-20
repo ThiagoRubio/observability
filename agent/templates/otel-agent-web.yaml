@@ -1,0 +1,83 @@
+receivers:
+  hostmetrics:
+    collection_interval: 30s
+    scrapers:
+      cpu:
+      memory:
+      disk:
+      filesystem:
+      network:
+      load:
+
+  # Requer stub_status habilitado num server local (ver README / passo a passo).
+  # Endpoint dedicado em 127.0.0.1:8080 para nao conflitar com o frontend Zabbix
+  # que serve nas portas 80/443.
+  nginx:
+    endpoint: "http://127.0.0.1:8080/nginx_status"
+    collection_interval: 30s
+
+  filelog/nginx_access:
+    include:
+      - /var/log/nginx/access.log
+      - /var/log/nginx/zabbix_access.log
+    start_at: end
+    include_file_name: false
+    include_file_path: true
+
+  filelog/nginx_error:
+    include:
+      - /var/log/nginx/error.log
+      - /var/log/nginx/zabbix_error.log
+    start_at: end
+    include_file_name: false
+    include_file_path: true
+
+  filelog/php_fpm:
+    include:
+      - /var/log/php-fpm.log
+      - /var/log/php-fpm/error.log
+    start_at: end
+    include_file_name: false
+    include_file_path: true
+
+processors:
+  memory_limiter:
+    check_interval: 5s
+    limit_mib: 256
+    spike_limit_mib: 64
+  batch:
+    timeout: 10s
+    send_batch_size: 1024
+  resource:
+    attributes:
+      - key: zbx.role
+        value: web
+        action: upsert
+      - key: zbx.node
+        value: __NODE_NAME__
+        action: upsert
+
+exporters:
+  otlp:
+    endpoint: __GATEWAY_HOST__:4317
+    tls:
+      insecure: true
+
+extensions:
+  health_check:
+    endpoint: 127.0.0.1:13133
+
+service:
+  extensions: [health_check]
+  pipelines:
+    metrics:
+      receivers: [hostmetrics, nginx]
+      processors: [memory_limiter, resource, batch]
+      exporters: [otlp]
+    logs:
+      receivers: [filelog/nginx_access, filelog/nginx_error, filelog/php_fpm]
+      processors: [memory_limiter, resource, batch]
+      exporters: [otlp]
+  telemetry:
+    logs:
+      level: info

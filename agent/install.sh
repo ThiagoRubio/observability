@@ -2,14 +2,20 @@
 #
 # install.sh
 #
-# Instala o OTel Collector "agent" + o bridge de stats do Zabbix em um
-# core ou proxy node, a partir dos arquivos deste repositorio (nao gera
-# nada via heredoc - copia e faz substituicao de placeholders).
+# Instala o OTel Collector "agent" em um no do ambiente. Tres papeis:
+#   - core  : Zabbix Server  -> otel-agent + zabbix-stats-bridge
+#   - proxy : Zabbix Proxy   -> otel-agent + zabbix-stats-bridge
+#   - web   : frontend Zabbix (nginx + php-fpm) -> SOMENTE otel-agent
+#             (sem bridge, sem StatsAllowedIP - nao e um no Zabbix)
+#
+# Copia arquivos deste repo e faz substituicao de placeholders (nao gera
+# nada via heredoc).
 #
 # Rode a partir da raiz do repo clonado no proprio no:
 #   git clone <repo> && cd zabbix-observability
 #   sudo ./agent/install.sh --role core  --gateway-host <ip> --node-name core1
 #   sudo ./agent/install.sh --role proxy --gateway-host <ip> --node-name proxy1
+#   sudo ./agent/install.sh --role web   --gateway-host <ip> --node-name web1
 #
 # Idempotente: pode rodar de novo sem duplicar nada.
 
@@ -39,8 +45,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ "$ROLE" != "core" && "$ROLE" != "proxy" ]]; then
-  echo "[erro] --role precisa ser 'core' ou 'proxy'" >&2
+if [[ "$ROLE" != "core" && "$ROLE" != "proxy" && "$ROLE" != "web" ]]; then
+  echo "[erro] --role precisa ser 'core', 'proxy' ou 'web'" >&2
   exit 1
 fi
 
@@ -57,29 +63,33 @@ fi
 echo "[install] role=${ROLE} gateway=${GATEWAY_HOST} node=${NODE_NAME} zabbix_port=${ZABBIX_PORT} bridge_port=${BRIDGE_PORT}"
 
 # ------------------------------------------------------------------------
-# 1. Checar StatsAllowedIP (nao editamos automaticamente - ver README)
+# 1. Checar StatsAllowedIP (apenas core/proxy - web nao e no Zabbix)
 # ------------------------------------------------------------------------
-if [[ "$ROLE" == "core" ]]; then
-  ZABBIX_CONF="/etc/zabbix/zabbix_server.conf"
+if [[ "$ROLE" == "web" ]]; then
+  echo "[install] role=web: sem bridge e sem checagem de StatsAllowedIP."
 else
-  ZABBIX_CONF="/etc/zabbix/zabbix_proxy.conf"
-fi
-
-if [[ -f "$ZABBIX_CONF" ]]; then
-  if ! grep -q '^StatsAllowedIP' "$ZABBIX_CONF"; then
-    echo "[aviso] '$ZABBIX_CONF' nao tem StatsAllowedIP configurado."
-    echo "[aviso] Adicione 'StatsAllowedIP=127.0.0.1' la (preferencialmente no"
-    echo "[aviso] heredoc do setup-core.sh/setup-proxy.sh, para persistir em"
-    echo "[aviso] futuras regeracoes) e reinicie o zabbix-server/zabbix-proxy."
+  if [[ "$ROLE" == "core" ]]; then
+    ZABBIX_CONF="/etc/zabbix/zabbix_server.conf"
   else
-    echo "[install] StatsAllowedIP ja configurado em $ZABBIX_CONF"
+    ZABBIX_CONF="/etc/zabbix/zabbix_proxy.conf"
   fi
-else
-  echo "[aviso] $ZABBIX_CONF nao encontrado - pulando checagem de StatsAllowedIP"
+
+  if [[ -f "$ZABBIX_CONF" ]]; then
+    if ! grep -q '^StatsAllowedIP' "$ZABBIX_CONF"; then
+      echo "[aviso] '$ZABBIX_CONF' nao tem StatsAllowedIP configurado."
+      echo "[aviso] Adicione 'StatsAllowedIP=127.0.0.1' la (preferencialmente no"
+      echo "[aviso] heredoc do setup-core.sh/setup-proxy.sh, para persistir em"
+      echo "[aviso] futuras regeracoes) e reinicie o zabbix-server/zabbix-proxy."
+    else
+      echo "[install] StatsAllowedIP ja configurado em $ZABBIX_CONF"
+    fi
+  else
+    echo "[aviso] $ZABBIX_CONF nao encontrado - pulando checagem de StatsAllowedIP"
+  fi
 fi
 
 # ------------------------------------------------------------------------
-# 2. Instalar o OTel Collector Contrib (binario)
+# 2. Instalar o OTel Collector Contrib (binario) - todos os papeis
 # ------------------------------------------------------------------------
 OTEL_BIN="/usr/local/bin/otelcol-contrib"
 
@@ -97,21 +107,20 @@ else
 fi
 
 # ------------------------------------------------------------------------
-# 3. Instalar o bridge (copia do repo, sem heredoc)
+# 3+4. Bridge + unit systemd (apenas core/proxy)
 # ------------------------------------------------------------------------
-echo "[install] Instalando zabbix-stats-bridge.py..."
-install -m 0755 "${SCRIPT_DIR}/zabbix-stats-bridge.py" /usr/local/bin/zabbix-stats-bridge.py
+if [[ "$ROLE" != "web" ]]; then
+  echo "[install] Instalando zabbix-stats-bridge.py..."
+  install -m 0755 "${SCRIPT_DIR}/zabbix-stats-bridge.py" /usr/local/bin/zabbix-stats-bridge.py
 
-# ------------------------------------------------------------------------
-# 4. Unit systemd do bridge (template com substituicao de placeholders)
-# ------------------------------------------------------------------------
-echo "[install] Gerando unit systemd do bridge..."
-sed \
-  -e "s/__ZABBIX_PORT__/${ZABBIX_PORT}/" \
-  -e "s/__BRIDGE_PORT__/${BRIDGE_PORT}/" \
-  -e "s/__ROLE__/${ROLE}/" \
-  -e "s/__NODE_NAME__/${NODE_NAME}/" \
-  "${TEMPLATES_DIR}/zabbix-stats-bridge.service" > /etc/systemd/system/zabbix-stats-bridge.service
+  echo "[install] Gerando unit systemd do bridge..."
+  sed \
+    -e "s/__ZABBIX_PORT__/${ZABBIX_PORT}/" \
+    -e "s/__BRIDGE_PORT__/${BRIDGE_PORT}/" \
+    -e "s/__ROLE__/${ROLE}/" \
+    -e "s/__NODE_NAME__/${NODE_NAME}/" \
+    "${TEMPLATES_DIR}/zabbix-stats-bridge.service" > /etc/systemd/system/zabbix-stats-bridge.service
+fi
 
 # ------------------------------------------------------------------------
 # 5. Config do OTel Collector agent (template por papel de no)
@@ -130,34 +139,48 @@ sed \
 install -m 0644 "${TEMPLATES_DIR}/otelcol-agent.service" /etc/systemd/system/otelcol-agent.service
 
 # ------------------------------------------------------------------------
-# 7. Parar o bridge antes de checar a porta (evita falso-positivo com
-#    nossa propria instancia anterior)
+# 7. Checagem de porta do bridge (apenas core/proxy)
 # ------------------------------------------------------------------------
-systemctl stop zabbix-stats-bridge.service 2>/dev/null || true
+if [[ "$ROLE" != "web" ]]; then
+  # Parar o bridge antes de checar a porta (evita falso-positivo com nossa
+  # propria instancia anterior)
+  systemctl stop zabbix-stats-bridge.service 2>/dev/null || true
 
-if ss -tlnH "( sport = :${BRIDGE_PORT} )" 2>/dev/null | grep -q LISTEN; then
-  echo "[aviso] A porta ${BRIDGE_PORT} ja esta em uso por outro processo neste host (nao e o nosso bridge):"
-  ss -tlnp "( sport = :${BRIDGE_PORT} )" 2>/dev/null || true
-  echo "[aviso] Rode de novo com --bridge-port <outra-porta> para evitar conflito."
+  if ss -tlnH "( sport = :${BRIDGE_PORT} )" 2>/dev/null | grep -q LISTEN; then
+    echo "[aviso] A porta ${BRIDGE_PORT} ja esta em uso por outro processo neste host (nao e o nosso bridge):"
+    ss -tlnp "( sport = :${BRIDGE_PORT} )" 2>/dev/null || true
+    echo "[aviso] Rode de novo com --bridge-port <outra-porta> para evitar conflito."
+  fi
 fi
 
 # ------------------------------------------------------------------------
-# 8. Habilitar e (re)iniciar os servicos - restart explicito, nao
-#    'enable --now' (que nao reaplica binario/config se ja estiver ativo)
+# 8. Habilitar e (re)iniciar os servicos
 # ------------------------------------------------------------------------
 echo "[install] Recarregando systemd e (re)iniciando servicos..."
 systemctl daemon-reload
-systemctl enable zabbix-stats-bridge.service otelcol-agent.service >/dev/null
-systemctl restart zabbix-stats-bridge.service
-systemctl restart otelcol-agent.service
+if [[ "$ROLE" == "web" ]]; then
+  systemctl enable otelcol-agent.service >/dev/null
+  systemctl restart otelcol-agent.service
+else
+  systemctl enable zabbix-stats-bridge.service otelcol-agent.service >/dev/null
+  systemctl restart zabbix-stats-bridge.service
+  systemctl restart otelcol-agent.service
+fi
 
 sleep 3
 echo
 echo "[install] Status:"
-systemctl is-active zabbix-stats-bridge.service && echo "  zabbix-stats-bridge: ativo" || echo "  zabbix-stats-bridge: FALHOU"
+if [[ "$ROLE" != "web" ]]; then
+  systemctl is-active zabbix-stats-bridge.service && echo "  zabbix-stats-bridge: ativo" || echo "  zabbix-stats-bridge: FALHOU"
+fi
 systemctl is-active otelcol-agent.service && echo "  otelcol-agent: ativo" || echo "  otelcol-agent: FALHOU"
 
 echo
 echo "[install] Concluido. Verifique com:"
-echo "  curl -s http://127.0.0.1:${BRIDGE_PORT}/metrics | grep zabbix_stats_bridge_up"
-echo "  journalctl -u zabbix-stats-bridge -u otelcol-agent -f"
+if [[ "$ROLE" == "web" ]]; then
+  echo "  journalctl -u otelcol-agent -f"
+  echo "  # (metricas de nginx exigem stub_status em http://127.0.0.1:8080/nginx_status)"
+else
+  echo "  curl -s http://127.0.0.1:${BRIDGE_PORT}/metrics | grep zabbix_stats_bridge_up"
+  echo "  journalctl -u zabbix-stats-bridge -u otelcol-agent -f"
+fi
