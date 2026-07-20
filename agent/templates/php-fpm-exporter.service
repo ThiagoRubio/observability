@@ -1,0 +1,15 @@
+[Unit]
+Description=php-fpm_exporter (Zabbix observability)
+After=network.target php-fpm.service
+Wants=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/php-fpm_exporter server --phpfpm.scrape-uri "unix://__PHPFPM_SOCKET__;/status" --web.listen-address "127.0.0.1:9253"
+Restart=always
+RestartSec=5
+User=root
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

@@ -27,6 +27,8 @@ GATEWAY_HOST=""
 NODE_NAME="$(hostname -s)"
 ZABBIX_PORT="10051"
 BRIDGE_PORT="9998"
+PHPFPM_SOCKET="/run/php-fpm/www.sock"
+PFE_VERSION="2.2.0"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TEMPLATES_DIR="${SCRIPT_DIR}/templates"
@@ -41,6 +43,7 @@ while [[ $# -gt 0 ]]; do
     --node-name) NODE_NAME="$2"; shift 2 ;;
     --zabbix-port) ZABBIX_PORT="$2"; shift 2 ;;
     --bridge-port) BRIDGE_PORT="$2"; shift 2 ;;
+    --phpfpm-socket) PHPFPM_SOCKET="$2"; shift 2 ;;
     *) echo "[erro] Argumento desconhecido: $1" >&2; exit 1 ;;
   esac
 done
@@ -139,6 +142,29 @@ sed \
 install -m 0644 "${TEMPLATES_DIR}/otelcol-agent.service" /etc/systemd/system/otelcol-agent.service
 
 # ------------------------------------------------------------------------
+# 6b. php-fpm_exporter (apenas web) - expoe metricas de php-fpm em :9253
+#     para o prometheus receiver do otel-agent scrapear. Exige status page
+#     habilitado no pool (pm.status_path = /status).
+# ------------------------------------------------------------------------
+if [[ "$ROLE" == "web" ]]; then
+  PFE_BIN="/usr/local/bin/php-fpm_exporter"
+  if [[ -x "$PFE_BIN" ]]; then
+    echo "[install] php-fpm_exporter ja instalado - pulando download."
+  else
+    echo "[install] Baixando php-fpm_exporter ${PFE_VERSION}..."
+    curl -sSL -o "$PFE_BIN" \
+      "https://github.com/hipages/php-fpm_exporter/releases/download/v${PFE_VERSION}/php-fpm_exporter_${PFE_VERSION}_linux_amd64"
+    chmod +x "$PFE_BIN"
+    echo "[install] php-fpm_exporter instalado em ${PFE_BIN}"
+  fi
+
+  echo "[install] Gerando unit systemd do php-fpm_exporter (socket=${PHPFPM_SOCKET})..."
+  sed \
+    -e "s#__PHPFPM_SOCKET__#${PHPFPM_SOCKET}#" \
+    "${TEMPLATES_DIR}/php-fpm-exporter.service" > /etc/systemd/system/php-fpm-exporter.service
+fi
+
+# ------------------------------------------------------------------------
 # 7. Checagem de porta do bridge (apenas core/proxy)
 # ------------------------------------------------------------------------
 if [[ "$ROLE" != "web" ]]; then
@@ -159,7 +185,8 @@ fi
 echo "[install] Recarregando systemd e (re)iniciando servicos..."
 systemctl daemon-reload
 if [[ "$ROLE" == "web" ]]; then
-  systemctl enable otelcol-agent.service >/dev/null
+  systemctl enable php-fpm-exporter.service otelcol-agent.service >/dev/null
+  systemctl restart php-fpm-exporter.service
   systemctl restart otelcol-agent.service
 else
   systemctl enable zabbix-stats-bridge.service otelcol-agent.service >/dev/null
@@ -173,13 +200,18 @@ echo "[install] Status:"
 if [[ "$ROLE" != "web" ]]; then
   systemctl is-active zabbix-stats-bridge.service && echo "  zabbix-stats-bridge: ativo" || echo "  zabbix-stats-bridge: FALHOU"
 fi
+if [[ "$ROLE" == "web" ]]; then
+  systemctl is-active php-fpm-exporter.service && echo "  php-fpm-exporter: ativo" || echo "  php-fpm-exporter: FALHOU"
+fi
 systemctl is-active otelcol-agent.service && echo "  otelcol-agent: ativo" || echo "  otelcol-agent: FALHOU"
 
 echo
 echo "[install] Concluido. Verifique com:"
 if [[ "$ROLE" == "web" ]]; then
-  echo "  journalctl -u otelcol-agent -f"
-  echo "  # (metricas de nginx exigem stub_status em http://127.0.0.1:8080/nginx_status)"
+  echo "  journalctl -u otelcol-agent -u php-fpm-exporter -f"
+  echo "  curl -s http://127.0.0.1:9253/metrics | grep phpfpm_up"
+  echo "  # nginx: exige stub_status em http://127.0.0.1:8080/nginx_status"
+  echo "  # php-fpm: exige 'pm.status_path = /status' no pool + restart do php-fpm"
 else
   echo "  curl -s http://127.0.0.1:${BRIDGE_PORT}/metrics | grep zabbix_stats_bridge_up"
   echo "  journalctl -u zabbix-stats-bridge -u otelcol-agent -f"

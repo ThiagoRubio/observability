@@ -16,6 +16,16 @@ receivers:
     endpoint: "http://127.0.0.1:8080/nginx_status"
     collection_interval: 30s
 
+  # Scrape do php-fpm_exporter (metricas de php-fpm via status page).
+  # Exige pm.status_path = /status no pool e o php-fpm-exporter.service ativo.
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: php-fpm
+          scrape_interval: 30s
+          static_configs:
+            - targets: ["127.0.0.1:9253"]
+
   filelog/nginx_access:
     include:
       - /var/log/nginx/access.log
@@ -71,7 +81,7 @@ service:
   extensions: [health_check]
   pipelines:
     metrics:
-      receivers: [hostmetrics, nginx]
+      receivers: [hostmetrics, nginx, prometheus]
       processors: [memory_limiter, resource, batch]
       exporters: [otlp]
     logs:
