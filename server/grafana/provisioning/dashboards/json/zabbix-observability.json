@@ -34,7 +34,7 @@
           "text": "All",
           "value": "$__all"
         },
-        "refresh": 2,
+        "refresh": 1,
         "sort": 1
       },
       {
@@ -55,7 +55,7 @@
           "text": "All",
           "value": "$__all"
         },
-        "refresh": 2,
+        "refresh": 1,
         "sort": 1
       }
     ]
