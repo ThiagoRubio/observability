@@ -108,14 +108,14 @@
     {
       "id": 3,
       "type": "stat",
-      "title": "Nos monitorados",
-      "description": "Total de nos reportando o bridge (independente de up/down).",
+      "title": "Cores ativos (HA)",
+      "description": "Numero de cores com o trapper ativo (up==1). Em HA saudavel = 1 (o standby fica fora por design). Se 0, nenhum core ativo = emergencia real.",
       "gridPos": { "x": 4, "y": 1, "w": 4, "h": 4 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "count(zabbix_stats_bridge_up{role=~\"$role\", node=~\"$node\"}) or vector(0)",
+          "expr": "count(zabbix_stats_bridge_up{role=\"core\", node=~\"$node\"} == 1) or vector(0)",
           "refId": "A",
           "instant": true
         }
@@ -123,7 +123,13 @@
       "fieldConfig": {
         "defaults": {
           "unit": "none",
-          "thresholds": { "mode": "absolute", "steps": [ { "color": "text", "value": null } ] }
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
         },
         "overrides": []
       },
@@ -279,7 +285,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "max by (node, role) (zabbix_stats_bridge_up{role=~\"$role\", node=~\"$node\"})",
+          "expr": "(max by (node, role) (zabbix_stats_bridge_up{role=\"core\", role=~\"$role\", node=~\"$node\"}) + 1) or (max by (node, role) (zabbix_stats_bridge_up{role=\"proxy\", role=~\"$role\", node=~\"$node\"}) * 2)",
           "refId": "A",
           "instant": true,
           "format": "table"
@@ -322,7 +328,7 @@
             "renameByName": {
               "node": "No",
               "role": "Papel",
-              "Value #A": "Bridge",
+              "Value #A": "Estado",
               "Value #B": "Uptime",
               "Value #C": "Hosts",
               "Value #D": "Items",
@@ -346,13 +352,13 @@
         },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "Bridge" },
+            "matcher": { "id": "byName", "options": "Estado" },
             "properties": [
               { "id": "custom.cellOptions", "value": { "type": "color-background" } },
               { "id": "mappings", "value": [
-                { "type": "value", "options": { "0": { "text": "DOWN", "color": "red", "index": 0 }, "1": { "text": "UP", "color": "green", "index": 1 } } }
+                { "type": "value", "options": { "0": { "text": "DOWN", "color": "red", "index": 0 }, "1": { "text": "STANDBY", "color": "blue", "index": 1 }, "2": { "text": "UP", "color": "green", "index": 2 } } }
               ] },
-              { "id": "thresholds", "value": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] } }
+              { "id": "thresholds", "value": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "blue", "value": 1 }, { "color": "green", "value": 2 } ] } }
             ]
           },
           {
