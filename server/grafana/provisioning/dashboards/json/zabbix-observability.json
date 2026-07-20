@@ -841,10 +841,44 @@
       }
     },
     {
+      "id": 30,
+      "type": "row",
+      "title": "Logs ao vivo (Loki)",
+      "gridPos": { "x": 0, "y": 77, "w": 24, "h": 1 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 31,
+      "type": "logs",
+      "title": "Logs - zabbix / nginx / php-fpm (filtrado por no e papel)",
+      "description": "Logs coletados via filelog e enviados ao Loki. Filtra por zbx_node/zbx_role (structured metadata). Clique numa linha para ver o log_file_path (origem) e o nivel.",
+      "gridPos": { "x": 0, "y": 78, "w": 24, "h": 12 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "{service_name=\"unknown_service\"} | zbx_node=~\"$node\" | zbx_role=~\"$role\"",
+          "refId": "A",
+          "queryType": "range"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "sortOrder": "Descending"
+      }
+    },
+    {
       "id": 23,
       "type": "row",
       "title": "Pendente Fase 2 (Zabbix API)",
-      "gridPos": { "x": 0, "y": 77, "w": 24, "h": 1 },
+      "gridPos": { "x": 0, "y": 90, "w": 24, "h": 1 },
       "collapsed": false,
       "panels": []
     },
@@ -852,7 +886,7 @@
       "id": 24,
       "type": "text",
       "title": "Metricas que dependem do zabbix-api-bridge (nao implementado)",
-      "gridPos": { "x": 0, "y": 78, "w": 24, "h": 4 },
+      "gridPos": { "x": 0, "y": 91, "w": 24, "h": 4 },
       "options": {
         "mode": "markdown",
         "content": "**Estas metricas nao existem no protocolo `zabbix.stats`** e por isso nao aparecem aqui. Elas sao itens internos do Zabbix, acessiveis somente via **Zabbix API** — dependem do `zabbix-api-bridge.py` (Fase 2 do design doc), ainda nao implementado:\n\n- `zabbix[queue]` — fila de itens atrasados\n- `zabbix[proxy_buffer,*]` — estado do buffer dos proxies (Zabbix 7.0+)\n- `zabbix[vps,written]` — valores gravados por segundo (throughput)\n\nQuando o bridge de API existir, esta secao vira paineis de fila, proxy buffer e VPS. Os **logs** de nginx/php-fpm (role web) sao coletados e vao para o **Loki** — um painel de logs ao vivo esta pendente (falta confirmar os labels no Loki)."
