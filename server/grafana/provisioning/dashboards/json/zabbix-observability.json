@@ -8,7 +8,7 @@
   ],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "refresh": "30s",
   "time": {
     "from": "now-6h",
@@ -19,6 +19,7 @@
       {
         "name": "role",
         "type": "query",
+        "label": "Papel",
         "datasource": {
           "type": "prometheus",
           "uid": "prometheus"
@@ -39,6 +40,7 @@
       {
         "name": "node",
         "type": "query",
+        "label": "Nó",
         "datasource": {
           "type": "prometheus",
           "uid": "prometheus"
@@ -62,13 +64,8 @@
     {
       "id": 1,
       "type": "row",
-      "title": "Visao geral",
-      "gridPos": {
-        "x": 0,
-        "y": 0,
-        "w": 24,
-        "h": 1
-      },
+      "title": "Saude & visao geral",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 },
       "collapsed": false,
       "panels": []
     },
@@ -76,25 +73,14 @@
       "id": 2,
       "type": "stat",
       "title": "Nos saudaveis",
-      "gridPos": {
-        "x": 0,
-        "y": 1,
-        "w": 4,
-        "h": 4
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "description": "Nos com o bridge conseguindo ler a stats interface (up == 1). Em core HA, o standby fica 0 por design.",
+      "gridPos": { "x": 0, "y": 1, "w": 4, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
           "expr": "count(zabbix_stats_bridge_up{role=~\"$role\", node=~\"$node\"} == 1) or vector(0)",
           "refId": "A",
-          "legendFormat": "",
           "instant": true
         }
       ],
@@ -104,27 +90,15 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
             ]
           }
         },
         "overrides": []
       },
       "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "colorMode": "value",
         "graphMode": "none",
         "textMode": "auto",
@@ -134,52 +108,27 @@
     {
       "id": 3,
       "type": "stat",
-      "title": "Nos monitorados (total)",
-      "gridPos": {
-        "x": 4,
-        "y": 1,
-        "w": 4,
-        "h": 4
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "title": "Nos monitorados",
+      "description": "Total de nos reportando o bridge (independente de up/down).",
+      "gridPos": { "x": 4, "y": 1, "w": 4, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
           "expr": "count(zabbix_stats_bridge_up{role=~\"$role\", node=~\"$node\"}) or vector(0)",
           "refId": "A",
-          "legendFormat": "",
           "instant": true
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "none",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              }
-            ]
-          }
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "text", "value": null } ] }
         },
         "overrides": []
       },
       "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "colorMode": "value",
         "graphMode": "none",
         "textMode": "auto",
@@ -190,51 +139,26 @@
       "id": 4,
       "type": "stat",
       "title": "Hosts monitorados",
-      "gridPos": {
-        "x": 8,
-        "y": 1,
-        "w": 4,
-        "h": 4
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "description": "Usa max() em vez de sum() para nao contar em dobro entre cores HA e proxies (o core reporta o total real).",
+      "gridPos": { "x": 8, "y": 1, "w": 4, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum(zabbix_hosts_monitored{role=~\"$role\", node=~\"$node\"})",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "max(zabbix_hosts_monitored{role=~\"$role\", node=~\"$node\"})",
           "refId": "A",
-          "legendFormat": "",
           "instant": true
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "none",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              }
-            ]
-          }
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "text", "value": null } ] }
         },
         "overrides": []
       },
       "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "colorMode": "value",
         "graphMode": "none",
         "textMode": "auto",
@@ -245,51 +169,26 @@
       "id": 5,
       "type": "stat",
       "title": "Items monitorados",
-      "gridPos": {
-        "x": 12,
-        "y": 1,
-        "w": 4,
-        "h": 4
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "description": "max() entre nos para evitar dupla contagem (ver Hosts monitorados).",
+      "gridPos": { "x": 12, "y": 1, "w": 4, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum(zabbix_items_monitored{role=~\"$role\", node=~\"$node\"})",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "max(zabbix_items_monitored{role=~\"$role\", node=~\"$node\"})",
           "refId": "A",
-          "legendFormat": "",
           "instant": true
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "none",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              }
-            ]
-          }
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "text", "value": null } ] }
         },
         "overrides": []
       },
       "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "colorMode": "value",
         "graphMode": "none",
         "textMode": "auto",
@@ -300,25 +199,13 @@
       "id": 6,
       "type": "stat",
       "title": "Items sem suporte",
-      "gridPos": {
-        "x": 16,
-        "y": 1,
-        "w": 4,
-        "h": 4
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "gridPos": { "x": 16, "y": 1, "w": 4, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum(zabbix_items_unsupported{role=~\"$role\", node=~\"$node\"})",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "max(zabbix_items_unsupported{role=~\"$role\", node=~\"$node\"})",
           "refId": "A",
-          "legendFormat": "",
           "instant": true
         }
       ],
@@ -328,31 +215,16 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 1
-              },
-              {
-                "color": "red",
-                "value": 10
-              }
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 1 },
+              { "color": "red", "value": 100 }
             ]
           }
         },
         "overrides": []
       },
       "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "colorMode": "value",
         "graphMode": "none",
         "textMode": "auto",
@@ -362,52 +234,27 @@
     {
       "id": 7,
       "type": "stat",
-      "title": "Uptime",
-      "gridPos": {
-        "x": 20,
-        "y": 1,
-        "w": 4,
-        "h": 4
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "title": "Uptime (maior)",
+      "description": "time() - boottime do no com maior uptime.",
+      "gridPos": { "x": 20, "y": 1, "w": 4, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
           "expr": "max(time() - zabbix_boottime_seconds{role=~\"$role\", node=~\"$node\"})",
           "refId": "A",
-          "legendFormat": "",
           "instant": true
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "s",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              }
-            ]
-          }
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "text", "value": null } ] }
         },
         "overrides": []
       },
       "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "colorMode": "value",
         "graphMode": "none",
         "textMode": "auto",
@@ -417,36 +264,343 @@
     {
       "id": 8,
       "type": "row",
-      "title": "Processos internos - percentual ocupado",
-      "gridPos": {
-        "x": 0,
-        "y": 5,
-        "w": 24,
-        "h": 1
-      },
+      "title": "Saude dos nos",
+      "gridPos": { "x": 0, "y": 5, "w": 24, "h": 1 },
       "collapsed": false,
       "panels": []
     },
     {
       "id": 9,
-      "type": "timeseries",
-      "title": "Busy % por processo (media)",
-      "gridPos": {
-        "x": 0,
-        "y": 6,
-        "w": 24,
-        "h": 9
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "type": "table",
+      "title": "Status por no",
+      "description": "Bridge, uptime, hosts, items e items sem suporte por no. Em core HA o standby aparece com Bridge DOWN (esperado).",
+      "gridPos": { "x": 0, "y": 6, "w": 24, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "max by (node, role) (zabbix_stats_bridge_up{role=~\"$role\", node=~\"$node\"})",
+          "refId": "A",
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "max by (node) (time() - zabbix_boottime_seconds{role=~\"$role\", node=~\"$node\"})",
+          "refId": "B",
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "max by (node) (zabbix_hosts_monitored{role=~\"$role\", node=~\"$node\"})",
+          "refId": "C",
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "max by (node) (zabbix_items_monitored{role=~\"$role\", node=~\"$node\"})",
+          "refId": "D",
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "max by (node) (zabbix_items_unsupported{role=~\"$role\", node=~\"$node\"})",
+          "refId": "E",
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        { "id": "joinByField", "options": { "byField": "node", "mode": "outer" } },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true, "Time 1": true, "Time 2": true, "Time 3": true, "Time 4": true, "Time 5": true },
+            "renameByName": {
+              "node": "No",
+              "role": "Papel",
+              "Value #A": "Bridge",
+              "Value #B": "Uptime",
+              "Value #C": "Hosts",
+              "Value #D": "Items",
+              "Value #E": "Sem suporte"
+            },
+            "indexByName": {
+              "node": 0,
+              "role": 1,
+              "Value #A": 2,
+              "Value #B": 3,
+              "Value #C": 4,
+              "Value #D": 5,
+              "Value #E": 6
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "auto", "cellOptions": { "type": "auto" } }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Bridge" },
+            "properties": [
+              { "id": "custom.cellOptions", "value": { "type": "color-background" } },
+              { "id": "mappings", "value": [
+                { "type": "value", "options": { "0": { "text": "DOWN", "color": "red", "index": 0 }, "1": { "text": "UP", "color": "green", "index": 1 } } }
+              ] },
+              { "id": "thresholds", "value": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] } }
+            ]
           },
+          {
+            "matcher": { "id": "byName", "options": "Uptime" },
+            "properties": [ { "id": "unit", "value": "s" } ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Sem suporte" },
+            "properties": [
+              { "id": "custom.cellOptions", "value": { "type": "color-text" } },
+              { "id": "thresholds", "value": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 1 }, { "color": "red", "value": 100 } ] } }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [ { "displayName": "Papel", "desc": false } ]
+      }
+    },
+    {
+      "id": 10,
+      "type": "row",
+      "title": "Recursos de host (hostmetrics)",
+      "gridPos": { "x": 0, "y": 13, "w": 24, "h": 1 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "CPU - utilizacao (%)",
+      "description": "100 * (1 - idle) por no, media entre nucleos.",
+      "gridPos": { "x": 0, "y": 14, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "100 * (1 - avg by (zbx_node) (rate(system_cpu_time_seconds_total{state=\"idle\", zbx_node=~\"$node\", zbx_node!=\"\"}[$__rate_interval])))",
+          "refId": "A",
+          "legendFormat": "{{zbx_node}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "custom": {
+            "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": true,
+            "stacking": { "mode": "none", "group": "A" }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      }
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Memoria - uso (%)",
+      "description": "used / (used + free + cached + buffered + ...) por no.",
+      "gridPos": { "x": 12, "y": 14, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "100 * sum by (zbx_node) (system_memory_usage_bytes{state=\"used\", zbx_node=~\"$node\", zbx_node!=\"\"}) / sum by (zbx_node) (system_memory_usage_bytes{zbx_node=~\"$node\", zbx_node!=\"\"})",
+          "refId": "A",
+          "legendFormat": "{{zbx_node}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "custom": {
+            "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": true,
+            "stacking": { "mode": "none", "group": "A" }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      }
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Load average (1m)",
+      "gridPos": { "x": 0, "y": 22, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "system_cpu_load_average_1m{zbx_node=~\"$node\", zbx_node!=\"\"}",
+          "refId": "A",
+          "legendFormat": "{{zbx_node}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": true,
+            "stacking": { "mode": "none", "group": "A" }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      }
+    },
+    {
+      "id": 14,
+      "type": "table",
+      "title": "Filesystem - uso (%) por mountpoint",
+      "description": "Exclui tmpfs/overlay/squashfs. used / (used + free).",
+      "gridPos": { "x": 12, "y": 22, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "100 * sum by (zbx_node, mountpoint) (system_filesystem_usage_bytes{state=\"used\", type!~\"tmpfs|overlay|squashfs|fuse.*\", zbx_node=~\"$node\", zbx_node!=\"\"}) / sum by (zbx_node, mountpoint) (system_filesystem_usage_bytes{type!~\"tmpfs|overlay|squashfs|fuse.*\", zbx_node=~\"$node\", zbx_node!=\"\"})",
+          "refId": "A",
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true },
+            "renameByName": { "zbx_node": "No", "mountpoint": "Mountpoint", "Value": "Uso %" },
+            "indexByName": { "zbx_node": 0, "mountpoint": 1, "Value": 2 }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "custom": { "align": "auto", "cellOptions": { "type": "auto" } } },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Uso %" },
+            "properties": [
+              { "id": "unit", "value": "percent" },
+              { "id": "decimals", "value": 1 },
+              { "id": "custom.cellOptions", "value": { "type": "gauge", "mode": "gradient" } },
+              { "id": "min", "value": 0 },
+              { "id": "max", "value": 100 },
+              { "id": "thresholds", "value": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 80 }, { "color": "red", "value": 90 } ] } }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [ { "displayName": "Uso %", "desc": true } ]
+      }
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "Rede - throughput (rx/tx)",
+      "description": "rate de bytes por no e direcao (exclui loopback).",
+      "gridPos": { "x": 0, "y": 30, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum by (zbx_node, direction) (rate(system_network_io_bytes_total{device!~\"lo\", zbx_node=~\"$node\", zbx_node!=\"\"}[$__rate_interval]))",
+          "refId": "A",
+          "legendFormat": "{{zbx_node}} - {{direction}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": {
+            "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": true,
+            "stacking": { "mode": "none", "group": "A" }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      }
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "Disco - I/O (leitura/escrita)",
+      "description": "rate de bytes por no e direcao.",
+      "gridPos": { "x": 12, "y": 30, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum by (zbx_node, direction) (rate(system_disk_io_bytes_total{zbx_node=~\"$node\", zbx_node!=\"\"}[$__rate_interval]))",
+          "refId": "A",
+          "legendFormat": "{{zbx_node}} - {{direction}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": {
+            "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": true,
+            "stacking": { "mode": "none", "group": "A" }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      }
+    },
+    {
+      "id": 17,
+      "type": "row",
+      "title": "Processos internos do Zabbix",
+      "gridPos": { "x": 0, "y": 38, "w": 24, "h": 1 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 18,
+      "type": "timeseries",
+      "title": "Busy % por processo (media)",
+      "gridPos": { "x": 0, "y": 39, "w": 24, "h": 9 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
           "expr": "zabbix_process_busy_percent{state=\"busy\", agg=\"avg\", role=~\"$role\", node=~\"$node\"}",
           "refId": "A",
           "legendFormat": "{{node}} - {{process}}"
@@ -455,60 +609,33 @@
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
+          "min": 0,
+          "max": 100,
           "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "pointSize": 5,
-            "showPoints": "never",
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "spanNulls": true
+            "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": true,
+            "stacking": { "mode": "none", "group": "A" }
           }
         },
         "overrides": []
       },
       "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "calcs": [
-            "mean",
-            "max"
-          ]
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
       }
     },
     {
-      "id": 10,
+      "id": 19,
       "type": "stat",
       "title": "Top 10 processos mais ocupados agora",
-      "gridPos": {
-        "x": 0,
-        "y": 15,
-        "w": 24,
-        "h": 4
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "gridPos": { "x": 0, "y": 48, "w": 24, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
           "expr": "topk(10, zabbix_process_busy_percent{state=\"busy\", agg=\"avg\", role=~\"$role\", node=~\"$node\"})",
           "refId": "A",
-          "legendFormat": "",
-          "instant": true
+          "instant": true,
+          "legendFormat": "{{node}}/{{process}}"
         }
       ],
       "fieldConfig": {
@@ -517,70 +644,39 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 50
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 50 },
+              { "color": "red", "value": 80 }
             ]
           }
         },
         "overrides": []
       },
       "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "colorMode": "background",
         "graphMode": "none",
-        "textMode": "auto",
+        "textMode": "value_and_name",
         "justifyMode": "auto"
       }
     },
     {
-      "id": 11,
+      "id": 20,
       "type": "row",
       "title": "Preprocessing",
-      "gridPos": {
-        "x": 0,
-        "y": 19,
-        "w": 24,
-        "h": 1
-      },
+      "gridPos": { "x": 0, "y": 52, "w": 24, "h": 1 },
       "collapsed": false,
       "panels": []
     },
     {
-      "id": 12,
+      "id": 21,
       "type": "timeseries",
       "title": "Fila de preprocessing",
-      "gridPos": {
-        "x": 0,
-        "y": 20,
-        "w": 12,
-        "h": 8
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "gridPos": { "x": 0, "y": 53, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
           "expr": "zabbix_preprocessing_queue{role=~\"$role\", node=~\"$node\"}",
           "refId": "A",
           "legendFormat": "{{node}}"
@@ -589,56 +685,28 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
+          "min": 0,
           "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "pointSize": 5,
-            "showPoints": "never",
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "spanNulls": true
+            "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": true,
+            "stacking": { "mode": "none", "group": "A" }
           }
         },
         "overrides": []
       },
       "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "calcs": [
-            "mean",
-            "max"
-          ]
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
       }
     },
     {
-      "id": 13,
+      "id": 22,
       "type": "timeseries",
       "title": "Preprocessing - itens em fila vs diretos",
-      "gridPos": {
-        "x": 12,
-        "y": 20,
-        "w": 12,
-        "h": 8
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "gridPos": { "x": 12, "y": 53, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
           "expr": "zabbix_preprocessing_count{role=~\"$role\", node=~\"$node\"}",
           "refId": "A",
           "legendFormat": "{{node}} - {{stage}}"
@@ -647,176 +715,35 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
+          "min": 0,
           "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "pointSize": 5,
-            "showPoints": "never",
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "spanNulls": true
+            "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": true,
+            "stacking": { "mode": "none", "group": "A" }
           }
         },
         "overrides": []
       },
       "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "calcs": [
-            "mean",
-            "max"
-          ]
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
       }
     },
     {
-      "id": 14,
+      "id": 23,
       "type": "row",
-      "title": "Proxy buffer (Zabbix 7.0+, apenas proxies)",
-      "gridPos": {
-        "x": 0,
-        "y": 28,
-        "w": 24,
-        "h": 1
-      },
+      "title": "Pendente Fase 2 (Zabbix API)",
+      "gridPos": { "x": 0, "y": 61, "w": 24, "h": 1 },
       "collapsed": false,
       "panels": []
     },
     {
-      "id": 15,
-      "type": "timeseries",
-      "title": "Estado do proxy buffer",
-      "gridPos": {
-        "x": 0,
-        "y": 29,
-        "w": 24,
-        "h": 8
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "zabbix_proxy_buffer{role=\"proxy\", node=~\"$node\"}",
-          "refId": "A",
-          "legendFormat": "{{node}} - {{buffer_metric}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "pointSize": 5,
-            "showPoints": "never",
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "spanNulls": true
-          }
-        },
-        "overrides": []
-      },
+      "id": 24,
+      "type": "text",
+      "title": "Metricas que dependem do zabbix-api-bridge (nao implementado)",
+      "gridPos": { "x": 0, "y": 62, "w": 24, "h": 4 },
       "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "calcs": [
-            "mean",
-            "max"
-          ]
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      }
-    },
-    {
-      "id": 16,
-      "type": "row",
-      "title": "Throughput",
-      "gridPos": {
-        "x": 0,
-        "y": 37,
-        "w": 24,
-        "h": 1
-      },
-      "collapsed": false,
-      "panels": []
-    },
-    {
-      "id": 17,
-      "type": "timeseries",
-      "title": "Valores gravados por segundo (VPS)",
-      "gridPos": {
-        "x": 0,
-        "y": 38,
-        "w": 24,
-        "h": 8
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "rate(zabbix_vps_written_total{role=~\"$role\", node=~\"$node\"}[5m])",
-          "refId": "A",
-          "legendFormat": "{{node}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops",
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "pointSize": 5,
-            "showPoints": "never",
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "spanNulls": true
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "calcs": [
-            "mean",
-            "max"
-          ]
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
+        "mode": "markdown",
+        "content": "**Estas metricas nao existem no protocolo `zabbix.stats`** e por isso nao aparecem aqui. Elas sao itens internos do Zabbix, acessiveis somente via **Zabbix API** — dependem do `zabbix-api-bridge.py` (Fase 2 do design doc), ainda nao implementado:\n\n- `zabbix[queue]` — fila de itens atrasados\n- `zabbix[proxy_buffer,*]` — estado do buffer dos proxies (Zabbix 7.0+)\n- `zabbix[vps,written]` — valores gravados por segundo (throughput)\n\nQuando o bridge de API existir, esta secao vira paineis de fila, proxy buffer e VPS. Nginx/PHP-FPM ficam centralizados nos servers web — observabilidade deles exige um agente rodando naqueles hosts (escopo separado)."
       }
     }
   ]

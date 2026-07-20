@@ -18,6 +18,11 @@ processors:
 exporters:
   prometheusremotewrite:
     endpoint: http://zbx-prometheus:9090/api/v1/write
+    # Promove atributos de recurso (zbx.node, zbx.role, host.name...) para
+    # labels das metricas. Sem isso, os host metrics (system_*) nao carregam
+    # o nó e colidem entre si na mesma serie.
+    resource_to_telemetry_conversion:
+      enabled: true
   otlphttp/loki:
     endpoint: http://zbx-loki:3100/otlp
     tls:
