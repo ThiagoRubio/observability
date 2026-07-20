@@ -21,11 +21,19 @@ zabbix-observability/
 │       └── provisioning/
 │           ├── datasources/    # datasources com uid fixo
 │           └── dashboards/     # dashboards versionados (auto-carregados)
-└── agent/                      # roda em cada core/proxy Zabbix
-    ├── install.sh               # instala bridge + collector agent, idempotente
+└── agent/                      # roda em cada core/proxy/web Zabbix
+    ├── install.sh               # instala collector agent (+ bridge/exporter), idempotente
     ├── zabbix-stats-bridge.py   # fala o protocolo ZBXD, expõe zabbix.stats como Prometheus
     └── templates/               # units systemd + configs do collector (por papel)
 ```
+
+Três papéis de agente (`--role`):
+
+| Papel | Onde roda | Componentes instalados | Coleta |
+|-------|-----------|------------------------|--------|
+| `core`  | Zabbix Server | otel-agent + zabbix-stats-bridge | hostmetrics, `zabbix.stats`, logs do server |
+| `proxy` | Zabbix Proxy  | otel-agent + zabbix-stats-bridge | hostmetrics, `zabbix.stats`, logs do proxy |
+| `web`   | frontend (nginx + php-fpm) | otel-agent + php-fpm_exporter | hostmetrics, nginx `stub_status`, php-fpm status, logs nginx/php-fpm |
 
 ## Deploy — servidor de observabilidade
 
@@ -89,7 +97,78 @@ Em topologia HA nativa do Zabbix 7.0, **só o nó ativo** abre a porta do
 trapper — o bridge no nó standby vai reportar `zabbix_stats_bridge_up 0`
 permanentemente, o que é esperado, não é falha. Ao consultar/alertar sobre
 essa métrica para `role="core"`, use agregação (`max()`) em vez de checar
-node a node, para não gerar falso positivo.
+node a node, para não gerar falso positivo. O dashboard já trata isso:
+mostra o standby como **STANDBY** (azul), não DOWN, e traz um KPI
+"Cores ativos (HA)" que só fica vermelho se o par inteiro cair.
+
+## Deploy — agente web (nginx + php-fpm)
+
+Os web servers hospedam o frontend Zabbix (nginx + php-fpm). Eles **não**
+rodam Zabbix, então o agente web instala só o otel-collector + o
+`php-fpm_exporter` (sem bridge, sem `StatsAllowedIP`).
+
+**Pré-requisitos:**
+
+1. **nginx `stub_status`** habilitado num server local (as métricas de nginx
+   dependem dele). Exemplo de drop-in em `/etc/nginx/conf.d/stub_status.conf`:
+   ```nginx
+   server {
+       listen 127.0.0.1:8080;
+       location /nginx_status { stub_status; access_log off; }
+       location / { return 404; }
+   }
+   ```
+   `nginx -t && systemctl reload nginx`. A porta `8080` é a esperada pelo
+   template; se estiver ocupada, ajuste o conf e o endpoint em
+   `otel-agent-web.yaml`.
+
+2. **php-fpm status page** habilitado no pool (`pm.status_path = /status` em
+   `/etc/php-fpm.d/www.conf`) + `systemctl restart php-fpm`.
+
+```bash
+git clone <url-do-repo> && cd zabbix-observability
+sudo ./agent/install.sh --role web --gateway-host <ip-do-servidor> --node-name <hostname>
+```
+
+Parâmetro opcional: `--phpfpm-socket <path>` — padrão `/run/php-fpm/www.sock`.
+Confira o `listen = ...` do `www.conf` do nó.
+
+Validação:
+```bash
+curl -s http://127.0.0.1:8080/nginx_status          # stub_status respondendo
+curl -s http://127.0.0.1:9253/metrics | grep phpfpm_up   # esperado: phpfpm_up ... 1
+```
+
+## Impacto nos nós e cadência de coleta
+
+Os agentes são projetados para footprint baixo — coleta a cada 30 s, teto de
+memória via `memory_limiter`, nada persistido no nó (sem fila em disco ainda).
+
+**Componentes por nó e consumo aproximado:**
+
+| Componente | Papéis | RAM (teto/típico) | CPU | Observação |
+|------------|--------|-------------------|-----|------------|
+| `otelcol-agent` | todos | `memory_limiter` 256 MiB (spike +64); na prática bem menos | desprezível | roda como `root`; lê `/proc` e faz tail dos logs |
+| `zabbix-stats-bridge` | core, proxy | ~20–40 MiB (Python) | desprezível | 1 conexão TCP local ao trapper a cada scrape |
+| `php-fpm_exporter` | web | ~15–20 MiB (Go) | desprezível | lê o status page via socket local |
+
+**Cadência (intervalos configurados nos templates):**
+
+| Fonte | Intervalo |
+|-------|-----------|
+| hostmetrics (CPU/mem/disco/rede/load) | 30 s |
+| `zabbix.stats` (scrape do bridge) | 30 s |
+| nginx `stub_status` | 30 s |
+| php-fpm status (scrape do exporter) | 30 s |
+| logs (filelog) | tempo real (tail, `start_at: end`) |
+| flush/batch para o gateway | a cada 10 s ou 1024 itens |
+| retenção no Prometheus (gateway) | 30 dias |
+
+**Impacto no serviço monitorado:** mínimo. O bridge só abre uma conexão local
+(`127.0.0.1`) ao trapper pedindo `zabbix.stats` a cada 30 s — não interfere na
+coleta do Zabbix. hostmetrics lê `/proc`; nginx/php-fpm são lidos pelos status
+locais. Export ao gateway é em lote e comprimido (banda baixa). O
+`memory_limiter` garante o teto de RAM mesmo sob pico.
 
 ## Gaps conhecidos (ver design doc para detalhes)
 
