@@ -53,7 +53,9 @@ server {
     location / { return 404; }
 }
 EOF
-nginx -t && systemctl reload nginx
+nginx -t
+systemctl enable --now nginx        # sobe/habilita se nao estiver rodando
+systemctl reload nginx              # aplica o stub_status
 curl -s http://127.0.0.1:8080/nginx_status      # deve responder "Active connections: ..."
 
 # c) php-fpm status page
