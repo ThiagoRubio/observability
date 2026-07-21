@@ -38,8 +38,10 @@ Papéis de agente (`--role`):
 | `db`    | PostgreSQL | otel-agent + postgres_exporter | hostmetrics, métricas PG (`pg_*`), logs do postgres |
 | `witness` | pgpool + pgbouncer | otel-agent + pgpool2_exporter + pgbouncer_exporter | hostmetrics, métricas pgpool/pgbouncer |
 
-Passo a passo completo de rollout (HML → PROD): [`docs/deploy-hml.md`](docs/deploy-hml.md).
-Credenciais de banco vão em `EnvironmentFile` (modo 600, fora do git).
+**Manual de instalação do zero** (por tipo de nó, com validação e troubleshooting):
+[`docs/manual-instalacao.md`](docs/manual-instalacao.md). Visão HML→PROD resumida em
+[`docs/deploy-hml.md`](docs/deploy-hml.md). Credenciais de banco vão em
+`EnvironmentFile` (modo 600, fora do git).
 
 ## Deploy — servidor de observabilidade
 
