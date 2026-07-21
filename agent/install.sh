@@ -22,6 +22,7 @@ PFE_VERSION="2.2.0"      # php-fpm_exporter
 PGE_VERSION="0.20.1"     # postgres_exporter
 PBE_VERSION="0.12.1"     # pgbouncer_exporter
 PPE_VERSION="1.2.2"      # pgpool2_exporter
+NGE_VERSION="1.5.1"      # nginx-prometheus-exporter
 
 ROLE=""
 GATEWAY_HOST=""
@@ -88,6 +89,7 @@ role_has() {
   case "$1" in
     bridge)    [[ "$ROLE" == "core" || "$ROLE" == "proxy" || "$ROLE" == "core-web" ]] ;;
     phpfpm)    [[ "$ROLE" == "web"  || "$ROLE" == "core-web" ]] ;;
+    nginx)     [[ "$ROLE" == "web"  || "$ROLE" == "core-web" ]] ;;
     zabbix)    [[ "$ROLE" == "core" || "$ROLE" == "proxy" || "$ROLE" == "core-web" ]] ;;
     postgres)  [[ "$ROLE" == "db" ]] ;;
     witness)   [[ "$ROLE" == "witness" ]] ;;
@@ -204,6 +206,27 @@ if role_has phpfpm; then
 fi
 
 # ------------------------------------------------------------------------
+# 4b. nginx-prometheus-exporter (web / core-web) - expoe nginx_up em :9113
+#     (le o mesmo stub_status; complementa o receiver nginx do otel)
+# ------------------------------------------------------------------------
+if role_has nginx; then
+  NGX_BIN="/usr/local/bin/nginx-prometheus-exporter"
+  if [[ -x "$NGX_BIN" ]]; then
+    echo "[install] nginx-prometheus-exporter ja instalado - pulando download."
+  else
+    echo "[install] Baixando nginx-prometheus-exporter ${NGE_VERSION}..."
+    TMP_NGX="$(mktemp)"
+    curl -sSL -o "$TMP_NGX" \
+      "https://github.com/nginxinc/nginx-prometheus-exporter/releases/download/v${NGE_VERSION}/nginx-prometheus-exporter_${NGE_VERSION}_linux_amd64.tar.gz"
+    tar -xzf "$TMP_NGX" -C /usr/local/bin nginx-prometheus-exporter
+    chmod +x "$NGX_BIN"
+    rm -f "$TMP_NGX"
+    echo "[install] nginx-prometheus-exporter instalado em ${NGX_BIN}"
+  fi
+  install -m 0644 "${TEMPLATES_DIR}/nginx-exporter.service" /etc/systemd/system/nginx-exporter.service
+fi
+
+# ------------------------------------------------------------------------
 # 5. postgres_exporter (db)
 # ------------------------------------------------------------------------
 if role_has postgres; then
@@ -291,6 +314,7 @@ systemctl daemon-reload
 SERVICES=()
 role_has bridge    && SERVICES+=("zabbix-stats-bridge.service")
 role_has phpfpm    && SERVICES+=("php-fpm-exporter.service")
+role_has nginx     && SERVICES+=("nginx-exporter.service")
 role_has postgres  && SERVICES+=("postgres-exporter.service")
 role_has witness   && SERVICES+=("pgpool2-exporter.service" "pgbouncer-exporter.service")
 SERVICES+=("otelcol-agent.service")
@@ -315,6 +339,7 @@ echo
 echo "[install] Concluido (role=${ROLE}). Verifique com:"
 role_has bridge    && echo "  curl -s http://127.0.0.1:${BRIDGE_PORT}/metrics | grep zabbix_stats_bridge_up"
 role_has phpfpm    && echo "  curl -s http://127.0.0.1:9253/metrics | grep phpfpm_up"
+role_has nginx     && echo "  curl -s http://127.0.0.1:9113/metrics | grep '^nginx_up'"
 role_has postgres  && echo "  curl -s http://127.0.0.1:9187/metrics | grep pg_up"
 role_has witness   && echo "  curl -s http://127.0.0.1:9719/metrics | grep pgpool2_up ; curl -s http://127.0.0.1:9127/metrics | grep pgbouncer_up"
 echo "  journalctl -u otelcol-agent -f"

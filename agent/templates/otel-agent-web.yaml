@@ -25,6 +25,10 @@ receivers:
           scrape_interval: 30s
           static_configs:
             - targets: ["127.0.0.1:9253"]
+        - job_name: nginx
+          scrape_interval: 30s
+          static_configs:
+            - targets: ["127.0.0.1:9113"]
 
   filelog/nginx_access:
     include:

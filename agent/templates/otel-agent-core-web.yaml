@@ -22,6 +22,10 @@ receivers:
           scrape_interval: 30s
           static_configs:
             - targets: ["127.0.0.1:9253"]
+        - job_name: nginx
+          scrape_interval: 30s
+          static_configs:
+            - targets: ["127.0.0.1:9113"]
 
   nginx:
     endpoint: "http://127.0.0.1:8080/nginx_status"

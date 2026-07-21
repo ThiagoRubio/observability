@@ -1,0 +1,16 @@
+[Unit]
+Description=nginx-prometheus-exporter (Zabbix observability)
+After=network.target nginx.service
+Wants=network.target
+
+[Service]
+Type=simple
+# Le o mesmo stub_status (127.0.0.1:8080) e expoe nginx_up + metricas em :9113.
+ExecStart=/usr/local/bin/nginx-prometheus-exporter --nginx.scrape-uri=http://127.0.0.1:8080/nginx_status --web.listen-address=127.0.0.1:9113
+Restart=always
+RestartSec=5
+User=root
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
