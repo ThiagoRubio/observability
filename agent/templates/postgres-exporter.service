@@ -1,0 +1,17 @@
+[Unit]
+Description=postgres_exporter (Zabbix observability)
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+# DATA_SOURCE_NAME fica no env file (modo 600, gerado pelo install.sh) - nunca no git.
+EnvironmentFile=/etc/postgres-exporter/postgres_exporter.env
+ExecStart=/usr/local/bin/postgres_exporter --web.listen-address=127.0.0.1:9187
+Restart=always
+RestartSec=5
+User=root
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

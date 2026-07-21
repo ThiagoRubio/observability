@@ -27,13 +27,19 @@ zabbix-observability/
     └── templates/               # units systemd + configs do collector (por papel)
 ```
 
-Três papéis de agente (`--role`):
+Papéis de agente (`--role`):
 
 | Papel | Onde roda | Componentes instalados | Coleta |
 |-------|-----------|------------------------|--------|
 | `core`  | Zabbix Server | otel-agent + zabbix-stats-bridge | hostmetrics, `zabbix.stats`, logs do server |
 | `proxy` | Zabbix Proxy  | otel-agent + zabbix-stats-bridge | hostmetrics, `zabbix.stats`, logs do proxy |
 | `web`   | frontend (nginx + php-fpm) | otel-agent + php-fpm_exporter | hostmetrics, nginx `stub_status`, php-fpm status, logs nginx/php-fpm |
+| `core-web` | core que **também** hospeda o frontend (HML) | otel-agent + bridge + php-fpm_exporter | tudo de core + web num único nó |
+| `db`    | PostgreSQL | otel-agent + postgres_exporter | hostmetrics, métricas PG (`pg_*`), logs do postgres |
+| `witness` | pgpool + pgbouncer | otel-agent + pgpool2_exporter + pgbouncer_exporter | hostmetrics, métricas pgpool/pgbouncer |
+
+Passo a passo completo de rollout (HML → PROD): [`docs/deploy-hml.md`](docs/deploy-hml.md).
+Credenciais de banco vão em `EnvironmentFile` (modo 600, fora do git).
 
 ## Deploy — servidor de observabilidade
 

@@ -1,0 +1,18 @@
+[Unit]
+Description=pgbouncer_exporter (Zabbix observability)
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+# PGBOUNCER_DSN = postgres://user:pass@127.0.0.1:6432/pgbouncer?sslmode=disable
+# fica no env file (modo 600, gerado pelo install.sh) - nunca no git.
+EnvironmentFile=/etc/pgbouncer-exporter/pgbouncer_exporter.env
+ExecStart=/usr/local/bin/pgbouncer_exporter --pgBouncer.connectionString=${PGBOUNCER_DSN} --web.listen-address=127.0.0.1:9127
+Restart=always
+RestartSec=5
+User=root
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,68 @@
+receivers:
+  hostmetrics:
+    collection_interval: 30s
+    scrapers:
+      cpu:
+      memory:
+      disk:
+      filesystem:
+      network:
+      load:
+
+  # Scrape do postgres_exporter (metricas do PostgreSQL).
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: postgres
+          scrape_interval: 30s
+          static_configs:
+            - targets: ["127.0.0.1:9187"]
+
+  filelog/postgres:
+    include:
+      - __PG_LOG_DIR__/*.log
+    start_at: end
+    include_file_name: false
+    include_file_path: true
+
+processors:
+  memory_limiter:
+    check_interval: 5s
+    limit_mib: 256
+    spike_limit_mib: 64
+  batch:
+    timeout: 10s
+    send_batch_size: 1024
+  resource:
+    attributes:
+      - key: zbx.role
+        value: db
+        action: upsert
+      - key: zbx.node
+        value: __NODE_NAME__
+        action: upsert
+
+exporters:
+  otlp:
+    endpoint: __GATEWAY_HOST__:4317
+    tls:
+      insecure: true
+
+extensions:
+  health_check:
+    endpoint: 127.0.0.1:13133
+
+service:
+  extensions: [health_check]
+  pipelines:
+    metrics:
+      receivers: [hostmetrics, prometheus]
+      processors: [memory_limiter, resource, batch]
+      exporters: [otlp]
+    logs:
+      receivers: [filelog/postgres]
+      processors: [memory_limiter, resource, batch]
+      exporters: [otlp]
+  telemetry:
+    logs:
+      level: info

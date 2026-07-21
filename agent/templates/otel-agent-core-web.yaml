@@ -1,0 +1,100 @@
+receivers:
+  hostmetrics:
+    collection_interval: 30s
+    scrapers:
+      cpu:
+      memory:
+      disk:
+      filesystem:
+      network:
+      load:
+
+  # Bridge de stats do Zabbix (:9998) + php-fpm_exporter (:9253) na mesma
+  # maquina. Usado quando o core tambem hospeda o frontend (topologia HML).
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: zabbix-stats-bridge
+          scrape_interval: 30s
+          static_configs:
+            - targets: ["127.0.0.1:__BRIDGE_PORT__"]
+        - job_name: php-fpm
+          scrape_interval: 30s
+          static_configs:
+            - targets: ["127.0.0.1:9253"]
+
+  nginx:
+    endpoint: "http://127.0.0.1:8080/nginx_status"
+    collection_interval: 30s
+
+  filelog/zabbix_server:
+    include: [/var/log/zabbix/zabbix_server.log]
+    start_at: end
+    include_file_name: false
+    include_file_path: true
+
+  filelog/nginx_access:
+    include:
+      - /var/log/nginx/access.log
+      - /var/log/nginx/zabbix_access.log
+    start_at: end
+    include_file_name: false
+    include_file_path: true
+
+  filelog/nginx_error:
+    include:
+      - /var/log/nginx/error.log
+      - /var/log/nginx/zabbix_error.log
+    start_at: end
+    include_file_name: false
+    include_file_path: true
+
+  filelog/php_fpm:
+    include:
+      - /var/log/php-fpm.log
+      - /var/log/php-fpm/error.log
+    start_at: end
+    include_file_name: false
+    include_file_path: true
+
+processors:
+  memory_limiter:
+    check_interval: 5s
+    limit_mib: 256
+    spike_limit_mib: 64
+  batch:
+    timeout: 10s
+    send_batch_size: 1024
+  resource:
+    attributes:
+      - key: zbx.role
+        value: core
+        action: upsert
+      - key: zbx.node
+        value: __NODE_NAME__
+        action: upsert
+
+exporters:
+  otlp:
+    endpoint: __GATEWAY_HOST__:4317
+    tls:
+      insecure: true
+
+extensions:
+  health_check:
+    endpoint: 127.0.0.1:13133
+
+service:
+  extensions: [health_check]
+  pipelines:
+    metrics:
+      receivers: [hostmetrics, prometheus, nginx]
+      processors: [memory_limiter, resource, batch]
+      exporters: [otlp]
+    logs:
+      receivers: [filelog/zabbix_server, filelog/nginx_access, filelog/nginx_error, filelog/php_fpm]
+      processors: [memory_limiter, resource, batch]
+      exporters: [otlp]
+  telemetry:
+    logs:
+      level: info
