@@ -1018,10 +1018,196 @@
       }
     },
     {
+      "id": 40,
+      "type": "row",
+      "title": "PostgreSQL (banco)",
+      "gridPos": { "x": 0, "y": 107, "w": 24, "h": 1 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 41,
+      "type": "table",
+      "title": "PostgreSQL - status por no",
+      "description": "pg_up (conexao), papel (primary/replica) e lag de replicacao por no.",
+      "gridPos": { "x": 0, "y": 108, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "max by (zbx_node) (pg_up{zbx_node=~\"$node\", zbx_node!=\"\"})",
+          "refId": "A",
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "max by (zbx_node) (pg_replication_is_replica{zbx_node=~\"$node\", zbx_node!=\"\"})",
+          "refId": "B",
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "max by (zbx_node) (pg_replication_lag_seconds{zbx_node=~\"$node\", zbx_node!=\"\"})",
+          "refId": "C",
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        { "id": "joinByField", "options": { "byField": "zbx_node", "mode": "outer" } },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true, "Time 1": true, "Time 2": true, "Time 3": true },
+            "renameByName": { "zbx_node": "No", "Value #A": "pg_up", "Value #B": "Papel", "Value #C": "Lag" },
+            "indexByName": { "zbx_node": 0, "Value #A": 1, "Value #B": 2, "Value #C": 3 }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "custom": { "align": "auto", "cellOptions": { "type": "auto" } } },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "pg_up" },
+            "properties": [
+              { "id": "custom.cellOptions", "value": { "type": "color-background" } },
+              { "id": "mappings", "value": [ { "type": "value", "options": { "0": { "text": "DOWN", "color": "red", "index": 0 }, "1": { "text": "UP", "color": "green", "index": 1 } } } ] },
+              { "id": "thresholds", "value": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Papel" },
+            "properties": [
+              { "id": "custom.cellOptions", "value": { "type": "color-background" } },
+              { "id": "mappings", "value": [ { "type": "value", "options": { "0": { "text": "PRIMARY", "color": "green", "index": 0 }, "1": { "text": "REPLICA", "color": "blue", "index": 1 } } } ] },
+              { "id": "thresholds", "value": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "blue", "value": 1 } ] } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Lag" },
+            "properties": [ { "id": "unit", "value": "s" } ]
+          }
+        ]
+      },
+      "options": { "showHeader": true, "cellHeight": "sm" }
+    },
+    {
+      "id": 42,
+      "type": "timeseries",
+      "title": "PostgreSQL - lag de replicacao",
+      "gridPos": { "x": 12, "y": 108, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "pg_replication_lag_seconds{zbx_node=~\"$node\", zbx_node!=\"\"}",
+          "refId": "A",
+          "legendFormat": "{{zbx_node}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "stacking": { "mode": "none", "group": "A" } }
+        },
+        "overrides": []
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    {
+      "id": 43,
+      "type": "timeseries",
+      "title": "PostgreSQL - conexoes vs max",
+      "gridPos": { "x": 0, "y": 116, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum by (zbx_node) (pg_stat_database_numbackends{zbx_node=~\"$node\", zbx_node!=\"\", datname!~\"template.*\"})",
+          "refId": "A",
+          "legendFormat": "{{zbx_node}} - conexoes"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "pg_settings_max_connections{zbx_node=~\"$node\", zbx_node!=\"\"}",
+          "refId": "B",
+          "legendFormat": "{{zbx_node}} - max"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "stacking": { "mode": "none", "group": "A" } }
+        },
+        "overrides": []
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    {
+      "id": 44,
+      "type": "timeseries",
+      "title": "PostgreSQL - transacoes/s (commit vs rollback)",
+      "gridPos": { "x": 12, "y": 116, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum by (zbx_node) (rate(pg_stat_database_xact_commit_total{zbx_node=~\"$node\", zbx_node!=\"\", datname!~\"template.*\"}[$__rate_interval]))",
+          "refId": "A",
+          "legendFormat": "{{zbx_node}} - commit"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum by (zbx_node) (rate(pg_stat_database_xact_rollback_total{zbx_node=~\"$node\", zbx_node!=\"\", datname!~\"template.*\"}[$__rate_interval]))",
+          "refId": "B",
+          "legendFormat": "{{zbx_node}} - rollback"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0,
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "stacking": { "mode": "none", "group": "A" } }
+        },
+        "overrides": []
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    {
+      "id": 45,
+      "type": "timeseries",
+      "title": "PostgreSQL - cache hit ratio (%)",
+      "description": "blks_hit / (blks_hit + blks_read). Abaixo de ~95% sugere shared_buffers/consulta ruim.",
+      "gridPos": { "x": 0, "y": 124, "w": 24, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "100 * sum by (zbx_node) (rate(pg_stat_database_blks_hit_total{zbx_node=~\"$node\", zbx_node!=\"\"}[$__rate_interval])) / clamp_min(sum by (zbx_node) (rate(pg_stat_database_blks_hit_total{zbx_node=~\"$node\", zbx_node!=\"\"}[$__rate_interval])) + sum by (zbx_node) (rate(pg_stat_database_blks_read_total{zbx_node=~\"$node\", zbx_node!=\"\"}[$__rate_interval])), 1)",
+          "refId": "A",
+          "legendFormat": "{{zbx_node}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "stacking": { "mode": "none", "group": "A" } }
+        },
+        "overrides": []
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "min"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    {
       "id": 23,
       "type": "row",
       "title": "Pendente Fase 2 (Zabbix API)",
-      "gridPos": { "x": 0, "y": 107, "w": 24, "h": 1 },
+      "gridPos": { "x": 0, "y": 131, "w": 24, "h": 1 },
       "collapsed": false,
       "panels": []
     },
@@ -1029,7 +1215,7 @@
       "id": 24,
       "type": "text",
       "title": "Metricas que dependem do zabbix-api-bridge (nao implementado)",
-      "gridPos": { "x": 0, "y": 108, "w": 24, "h": 4 },
+      "gridPos": { "x": 0, "y": 132, "w": 24, "h": 4 },
       "options": {
         "mode": "markdown",
         "content": "**Estas metricas nao existem no protocolo `zabbix.stats`** e por isso nao aparecem aqui. Elas sao itens internos do Zabbix, acessiveis somente via **Zabbix API** — dependem do `zabbix-api-bridge.py` (Fase 2 do design doc), ainda nao implementado:\n\n- `zabbix[queue]` — fila de itens atrasados\n- `zabbix[proxy_buffer,*]` — estado do buffer dos proxies (Zabbix 7.0+)\n- `zabbix[vps,written]` — valores gravados por segundo (throughput)\n\nQuando o bridge de API existir, esta secao vira paineis de fila, proxy buffer e VPS. Os **logs** de nginx/php-fpm (role web) sao coletados e vao para o **Loki** — um painel de logs ao vivo esta pendente (falta confirmar os labels no Loki)."
