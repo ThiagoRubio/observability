@@ -1,0 +1,90 @@
+{
+  "id": null,
+  "uid": "zbx-web",
+  "title": "Zabbix Obs — Web (nginx + php-fpm)",
+  "tags": ["zabbix", "opentelemetry", "zabbix-obs"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "links": [
+    { "asDropdown": true, "type": "dashboards", "tags": ["zabbix-obs"], "title": "Dashboards", "icon": "external link", "includeVars": true, "keepTime": true, "keepFilters": true, "targetBlank": false }
+  ],
+  "templating": {
+    "list": [
+      { "name": "role", "type": "query", "label": "Papel", "datasource": { "type": "prometheus", "uid": "prometheus" }, "query": { "query": "label_values(system_cpu_load_average_1m, zbx_role)", "refId": "role" }, "includeAll": true, "multi": true, "current": { "text": "All", "value": "$__all" }, "refresh": 1, "sort": 1 },
+      { "name": "node", "type": "query", "label": "No", "datasource": { "type": "prometheus", "uid": "prometheus" }, "query": { "query": "label_values(system_cpu_load_average_1m{zbx_role=~\"$role\"}, zbx_node)", "refId": "node" }, "includeAll": true, "multi": true, "current": { "text": "All", "value": "$__all" }, "refresh": 1, "sort": 1 }
+    ]
+  },
+  "panels": [
+    { "id": 1, "type": "row", "title": "Nginx", "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 }, "collapsed": false, "panels": [] },
+    {
+      "id": 2, "type": "timeseries", "title": "Nginx - conexoes ativas por estado",
+      "gridPos": { "x": 0, "y": 1, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "nginx_connections_current{zbx_node=~\"$node\", zbx_node!=\"\"}", "refId": "A", "legendFormat": "{{zbx_node}} - {{state}}" } ],
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "stacking": { "mode": "none", "group": "A" } } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    {
+      "id": 3, "type": "timeseries", "title": "Nginx - requests por segundo",
+      "gridPos": { "x": 12, "y": 1, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "rate(nginx_requests_total{zbx_node=~\"$node\", zbx_node!=\"\"}[$__rate_interval])", "refId": "A", "legendFormat": "{{zbx_node}}" } ],
+      "fieldConfig": { "defaults": { "unit": "reqps", "min": 0, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "stacking": { "mode": "none", "group": "A" } } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    {
+      "id": 4, "type": "timeseries", "title": "Nginx - conexoes aceitas vs tratadas",
+      "description": "Se 'aceitas' passa a superar 'tratadas', o nginx esta derrubando conexoes.",
+      "gridPos": { "x": 0, "y": 9, "w": 24, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "rate(nginx_connections_accepted_total{zbx_node=~\"$node\", zbx_node!=\"\"}[$__rate_interval])", "refId": "A", "legendFormat": "{{zbx_node}} - aceitas" },
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "rate(nginx_connections_handled_total{zbx_node=~\"$node\", zbx_node!=\"\"}[$__rate_interval])", "refId": "B", "legendFormat": "{{zbx_node}} - tratadas" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "cps", "min": 0, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "stacking": { "mode": "none", "group": "A" } } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    { "id": 5, "type": "row", "title": "php-fpm", "gridPos": { "x": 0, "y": 16, "w": 24, "h": 1 }, "collapsed": false, "panels": [] },
+    {
+      "id": 6, "type": "timeseries", "title": "php-fpm - processos (ativos / idle / total)",
+      "gridPos": { "x": 0, "y": 17, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "phpfpm_active_processes{zbx_node=~\"$node\", zbx_node!=\"\"}", "refId": "A", "legendFormat": "{{zbx_node}} - ativos" },
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "phpfpm_idle_processes{zbx_node=~\"$node\", zbx_node!=\"\"}", "refId": "B", "legendFormat": "{{zbx_node}} - idle" },
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "phpfpm_total_processes{zbx_node=~\"$node\", zbx_node!=\"\"}", "refId": "C", "legendFormat": "{{zbx_node}} - total" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "stacking": { "mode": "none", "group": "A" } } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    {
+      "id": 7, "type": "timeseries", "title": "php-fpm - fila de listen",
+      "description": "phpfpm_listen_queue > 0 sustentado = pm.max_children baixo.",
+      "gridPos": { "x": 12, "y": 17, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "phpfpm_listen_queue{zbx_node=~\"$node\", zbx_node!=\"\"}", "refId": "A", "legendFormat": "{{zbx_node}}" } ],
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "stacking": { "mode": "none", "group": "A" } } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    {
+      "id": 8, "type": "timeseries", "title": "php-fpm - slow requests (taxa)",
+      "gridPos": { "x": 0, "y": 25, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "rate(phpfpm_slow_requests_total{zbx_node=~\"$node\", zbx_node!=\"\"}[$__rate_interval])", "refId": "A", "legendFormat": "{{zbx_node}}" } ],
+      "fieldConfig": { "defaults": { "unit": "ops", "min": 0, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "stacking": { "mode": "none", "group": "A" } } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    {
+      "id": 9, "type": "timeseries", "title": "php-fpm - max children reached (taxa)",
+      "description": "Cada incremento = bateu em pm.max_children. Recorrente = aumentar max_children.",
+      "gridPos": { "x": 12, "y": 25, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "rate(phpfpm_max_children_reached_total{zbx_node=~\"$node\", zbx_node!=\"\"}[$__rate_interval])", "refId": "A", "legendFormat": "{{zbx_node}}" } ],
+      "fieldConfig": { "defaults": { "unit": "ops", "min": 0, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "stacking": { "mode": "none", "group": "A" } } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    }
+  ]
+}

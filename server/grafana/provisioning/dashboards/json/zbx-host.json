@@ -1,0 +1,72 @@
+{
+  "id": null,
+  "uid": "zbx-host",
+  "title": "Zabbix Obs — Host",
+  "tags": ["zabbix", "opentelemetry", "zabbix-obs"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "links": [
+    { "asDropdown": true, "type": "dashboards", "tags": ["zabbix-obs"], "title": "Dashboards", "icon": "external link", "includeVars": true, "keepTime": true, "keepFilters": true, "targetBlank": false }
+  ],
+  "templating": {
+    "list": [
+      { "name": "role", "type": "query", "label": "Papel", "datasource": { "type": "prometheus", "uid": "prometheus" }, "query": { "query": "label_values(system_cpu_load_average_1m, zbx_role)", "refId": "role" }, "includeAll": true, "multi": true, "current": { "text": "All", "value": "$__all" }, "refresh": 1, "sort": 1 },
+      { "name": "node", "type": "query", "label": "No", "datasource": { "type": "prometheus", "uid": "prometheus" }, "query": { "query": "label_values(system_cpu_load_average_1m{zbx_role=~\"$role\"}, zbx_node)", "refId": "node" }, "includeAll": true, "multi": true, "current": { "text": "All", "value": "$__all" }, "refresh": 1, "sort": 1 }
+    ]
+  },
+  "panels": [
+    { "id": 1, "type": "row", "title": "Recursos de host", "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 }, "collapsed": false, "panels": [] },
+    {
+      "id": 2, "type": "timeseries", "title": "CPU - utilizacao (%)",
+      "gridPos": { "x": 0, "y": 1, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "100 * (1 - avg by (zbx_node) (rate(system_cpu_time_seconds_total{state=\"idle\", zbx_node=~\"$node\", zbx_node!=\"\"}[$__rate_interval])))", "refId": "A", "legendFormat": "{{zbx_node}}" } ],
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "stacking": { "mode": "none", "group": "A" } } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    {
+      "id": 3, "type": "timeseries", "title": "Memoria - uso (%)",
+      "gridPos": { "x": 12, "y": 1, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "100 * sum by (zbx_node) (system_memory_usage_bytes{state=\"used\", zbx_node=~\"$node\", zbx_node!=\"\"}) / sum by (zbx_node) (system_memory_usage_bytes{zbx_node=~\"$node\", zbx_node!=\"\"})", "refId": "A", "legendFormat": "{{zbx_node}}" } ],
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "stacking": { "mode": "none", "group": "A" } } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    {
+      "id": 4, "type": "timeseries", "title": "Load average (1m)",
+      "gridPos": { "x": 0, "y": 9, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "system_cpu_load_average_1m{zbx_node=~\"$node\", zbx_node!=\"\"}", "refId": "A", "legendFormat": "{{zbx_node}}" } ],
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "stacking": { "mode": "none", "group": "A" } } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    {
+      "id": 5, "type": "table", "title": "Filesystem - uso (%) por mountpoint",
+      "gridPos": { "x": 12, "y": 9, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "100 * sum by (zbx_node, mountpoint) (system_filesystem_usage_bytes{state=\"used\", type!~\"tmpfs|overlay|squashfs|fuse.*\", zbx_node=~\"$node\", zbx_node!=\"\"}) / sum by (zbx_node, mountpoint) (system_filesystem_usage_bytes{type!~\"tmpfs|overlay|squashfs|fuse.*\", zbx_node=~\"$node\", zbx_node!=\"\"})", "refId": "A", "instant": true, "format": "table" } ],
+      "transformations": [ { "id": "organize", "options": { "excludeByName": { "Time": true }, "renameByName": { "zbx_node": "No", "mountpoint": "Mountpoint", "Value": "Uso %" }, "indexByName": { "zbx_node": 0, "mountpoint": 1, "Value": 2 } } } ],
+      "fieldConfig": { "defaults": { "custom": { "align": "auto", "cellOptions": { "type": "auto" } } }, "overrides": [ { "matcher": { "id": "byName", "options": "Uso %" }, "properties": [ { "id": "unit", "value": "percent" }, { "id": "decimals", "value": 1 }, { "id": "custom.cellOptions", "value": { "type": "gauge", "mode": "gradient" } }, { "id": "min", "value": 0 }, { "id": "max", "value": 100 }, { "id": "thresholds", "value": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 80 }, { "color": "red", "value": 90 } ] } } ] } ] },
+      "options": { "showHeader": true, "cellHeight": "sm", "sortBy": [ { "displayName": "Uso %", "desc": true } ] }
+    },
+    {
+      "id": 6, "type": "timeseries", "title": "Rede - throughput (rx/tx)",
+      "gridPos": { "x": 0, "y": 17, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum by (zbx_node, direction) (rate(system_network_io_bytes_total{device!~\"lo\", zbx_node=~\"$node\", zbx_node!=\"\"}[$__rate_interval]))", "refId": "A", "legendFormat": "{{zbx_node}} - {{direction}}" } ],
+      "fieldConfig": { "defaults": { "unit": "Bps", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "stacking": { "mode": "none", "group": "A" } } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    {
+      "id": 7, "type": "timeseries", "title": "Disco - I/O (leitura/escrita)",
+      "gridPos": { "x": 12, "y": 17, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum by (zbx_node, direction) (rate(system_disk_io_bytes_total{zbx_node=~\"$node\", zbx_node!=\"\"}[$__rate_interval]))", "refId": "A", "legendFormat": "{{zbx_node}} - {{direction}}" } ],
+      "fieldConfig": { "defaults": { "unit": "Bps", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "stacking": { "mode": "none", "group": "A" } } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    }
+  ]
+}

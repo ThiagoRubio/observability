@@ -1,0 +1,61 @@
+{
+  "id": null,
+  "uid": "zbx-internals",
+  "title": "Zabbix Obs — Zabbix interno",
+  "tags": ["zabbix", "opentelemetry", "zabbix-obs"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "links": [
+    { "asDropdown": true, "type": "dashboards", "tags": ["zabbix-obs"], "title": "Dashboards", "icon": "external link", "includeVars": true, "keepTime": true, "keepFilters": true, "targetBlank": false }
+  ],
+  "templating": {
+    "list": [
+      { "name": "role", "type": "query", "label": "Papel", "datasource": { "type": "prometheus", "uid": "prometheus" }, "query": { "query": "label_values(system_cpu_load_average_1m, zbx_role)", "refId": "role" }, "includeAll": true, "multi": true, "current": { "text": "All", "value": "$__all" }, "refresh": 1, "sort": 1 },
+      { "name": "node", "type": "query", "label": "No", "datasource": { "type": "prometheus", "uid": "prometheus" }, "query": { "query": "label_values(system_cpu_load_average_1m{zbx_role=~\"$role\"}, zbx_node)", "refId": "node" }, "includeAll": true, "multi": true, "current": { "text": "All", "value": "$__all" }, "refresh": 1, "sort": 1 }
+    ]
+  },
+  "panels": [
+    { "id": 1, "type": "row", "title": "Processos internos", "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 }, "collapsed": false, "panels": [] },
+    {
+      "id": 2, "type": "timeseries", "title": "Busy % por processo (media)",
+      "gridPos": { "x": 0, "y": 1, "w": 24, "h": 9 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "zabbix_process_busy_percent{state=\"busy\", agg=\"avg\", role=~\"$role\", node=~\"$node\"}", "refId": "A", "legendFormat": "{{node}} - {{process}}" } ],
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "stacking": { "mode": "none", "group": "A" } } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    {
+      "id": 3, "type": "stat", "title": "Top 10 processos mais ocupados agora",
+      "gridPos": { "x": 0, "y": 10, "w": 24, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "topk(10, zabbix_process_busy_percent{state=\"busy\", agg=\"avg\", role=~\"$role\", node=~\"$node\"})", "refId": "A", "instant": true, "legendFormat": "{{node}}/{{process}}" } ],
+      "fieldConfig": { "defaults": { "unit": "percent", "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 50 }, { "color": "red", "value": 80 } ] } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "background", "graphMode": "none", "textMode": "value_and_name", "justifyMode": "auto" }
+    },
+    { "id": 4, "type": "row", "title": "Preprocessing", "gridPos": { "x": 0, "y": 14, "w": 24, "h": 1 }, "collapsed": false, "panels": [] },
+    {
+      "id": 5, "type": "timeseries", "title": "Fila de preprocessing",
+      "gridPos": { "x": 0, "y": 15, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "zabbix_preprocessing_queue{role=~\"$role\", node=~\"$node\"}", "refId": "A", "legendFormat": "{{node}}" } ],
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "stacking": { "mode": "none", "group": "A" } } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    {
+      "id": 6, "type": "timeseries", "title": "Preprocessing - itens em fila vs diretos",
+      "gridPos": { "x": 12, "y": 15, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "zabbix_preprocessing_count{role=~\"$role\", node=~\"$node\"}", "refId": "A", "legendFormat": "{{node}} - {{stage}}" } ],
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "stacking": { "mode": "none", "group": "A" } } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    {
+      "id": 7, "type": "text", "title": "Pendente Fase 2 (Zabbix API)",
+      "gridPos": { "x": 0, "y": 23, "w": 24, "h": 4 },
+      "options": { "mode": "markdown", "content": "**Fila / buffer / VPS** dependem do `zabbix-api-bridge.py` (Fase 2): `zabbix[queue]`, `zabbix[proxy_buffer,*]`, `zabbix[vps,written]` nao existem no protocolo `zabbix.stats`, so via Zabbix API." }
+    }
+  ]
+}

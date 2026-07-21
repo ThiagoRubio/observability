@@ -1,0 +1,31 @@
+{
+  "id": null,
+  "uid": "zbx-logs",
+  "title": "Zabbix Obs — Logs",
+  "tags": ["zabbix", "opentelemetry", "zabbix-obs"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "links": [
+    { "asDropdown": true, "type": "dashboards", "tags": ["zabbix-obs"], "title": "Dashboards", "icon": "external link", "includeVars": true, "keepTime": true, "keepFilters": true, "targetBlank": false }
+  ],
+  "templating": {
+    "list": [
+      { "name": "role", "type": "query", "label": "Papel", "datasource": { "type": "prometheus", "uid": "prometheus" }, "query": { "query": "label_values(system_cpu_load_average_1m, zbx_role)", "refId": "role" }, "includeAll": true, "multi": true, "current": { "text": "All", "value": "$__all" }, "refresh": 1, "sort": 1 },
+      { "name": "node", "type": "query", "label": "No", "datasource": { "type": "prometheus", "uid": "prometheus" }, "query": { "query": "label_values(system_cpu_load_average_1m{zbx_role=~\"$role\"}, zbx_node)", "refId": "node" }, "includeAll": true, "multi": true, "current": { "text": "All", "value": "$__all" }, "refresh": 1, "sort": 1 },
+      { "name": "logfilter", "type": "custom", "label": "Origem", "query": "Zabbix : .*zabbix.* , Nginx : .*nginx.* , PHP-FPM : .*php.* , Postgres : .*postgres.*", "includeAll": true, "allValue": ".+", "multi": false, "current": { "text": "All", "value": "$__all" } }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1, "type": "logs", "title": "Logs - zabbix / nginx / php-fpm / postgres",
+      "description": "Loki. Filtra por no (zbx_node), papel (zbx_role) e origem (log_file_path). Clique numa linha para ver os metadados.",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 26 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [ { "datasource": { "type": "loki", "uid": "loki" }, "expr": "{service_name=\"unknown_service\"} | zbx_node=~\"$node\" | zbx_role=~\"$role\" | log_file_path=~\"$logfilter\"", "refId": "A", "queryType": "range" } ],
+      "options": { "showTime": true, "showLabels": false, "showCommonLabels": false, "wrapLogMessage": true, "prettifyLogMessage": false, "enableLogDetails": true, "dedupStrategy": "none", "sortOrder": "Descending" }
+    }
+  ]
+}
