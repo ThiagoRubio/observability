@@ -1,7 +1,8 @@
 # Zabbix Observability (OpenTelemetry)
 
-POC de observabilidade 360º do ambiente Zabbix (cores, proxies, e futuramente
-camada de banco) usando OpenTelemetry Collector + Prometheus + Loki + Grafana.
+POC de observabilidade 360º do ambiente Zabbix (cores, proxies, frontend web e
+camada de banco PostgreSQL/pgpool) usando OpenTelemetry Collector + Prometheus +
+Loki + Grafana.
 
 Ver [`docs/arquitetura-v2.md`](docs/arquitetura-v2.md) para o design completo,
 decisões, gaps conhecidos e roadmap de fases.
@@ -63,6 +64,20 @@ outro serviço no host em produção — ver ressalva no design doc).
 
 Login inicial: `admin` / senha definida em `grafana/docker-compose.yml`
 (`GF_SECURITY_ADMIN_PASSWORD` — troque antes de expor a outras pessoas).
+
+### Dashboards (provisionados, tag `zabbix-obs`)
+
+Divididos em **Overview + 5 detalhes**, com drill-down (as variáveis `$role`/`$node`
+e o intervalo de tempo carregam ao navegar entre eles):
+
+| Dashboard | UID | Foco |
+|-----------|-----|------|
+| **Overview** | `zbx-observability` | KPIs, status por nó (Zabbix + PostgreSQL), php-fpm up, heartbeat dos nós |
+| **Zabbix interno** | `zbx-internals` | processos busy%, preprocessing |
+| **Host** | `zbx-host` | CPU/mem/disco/rede/load |
+| **Web** | `zbx-web` | nginx + php-fpm |
+| **Banco** | `zbx-database` | PostgreSQL (pgpool/pgbouncer pendente do witness) |
+| **Logs** | `zbx-logs` | Loki, filtrável por nó/papel/origem |
 
 ## Deploy — agente (core ou proxy Zabbix)
 
@@ -157,8 +172,10 @@ memória via `memory_limiter`, nada persistido no nó (sem fila em disco ainda).
 | Componente | Papéis | RAM (teto/típico) | CPU | Observação |
 |------------|--------|-------------------|-----|------------|
 | `otelcol-agent` | todos | `memory_limiter` 256 MiB (spike +64); na prática bem menos | desprezível | roda como `root`; lê `/proc` e faz tail dos logs |
-| `zabbix-stats-bridge` | core, proxy | ~20–40 MiB (Python) | desprezível | 1 conexão TCP local ao trapper a cada scrape |
-| `php-fpm_exporter` | web | ~15–20 MiB (Go) | desprezível | lê o status page via socket local |
+| `zabbix-stats-bridge` | core, proxy, core-web | ~20–40 MiB (Python) | desprezível | 1 conexão TCP local ao trapper a cada scrape |
+| `php-fpm_exporter` | web, core-web | ~15–20 MiB (Go) | desprezível | lê o status page via socket local |
+| `postgres_exporter` | db | ~15–25 MiB (Go) | desprezível | conecta no PostgreSQL local (user `pg_monitor`) |
+| `pgpool2_exporter` + `pgbouncer_exporter` | witness | ~15–25 MiB cada (Go) | desprezível | leem `SHOW pool_*` / stats via socket local |
 
 **Cadência (intervalos configurados nos templates):**
 
@@ -178,14 +195,34 @@ coleta do Zabbix. hostmetrics lê `/proc`; nginx/php-fpm são lidos pelos status
 locais. Export ao gateway é em lote e comprimido (banda baixa). O
 `memory_limiter` garante o teto de RAM mesmo sob pico.
 
-## Gaps conhecidos (ver design doc para detalhes)
+## Estado atual
 
-- `zabbix[queue]`, `zabbix[proxy_buffer,*]` e `zabbix[vps,written]` **não
-  existem** no protocolo `zabbix.stats` — são itens internos, só acessíveis
-  via Zabbix API. Bridge separado (`zabbix-api-bridge.py`) ainda não
-  implementado (Fase 2 do design doc).
-- Camada de banco (PostgreSQL/PgBouncer/pgpool) ainda não integrada —
-  depende de negociação com a DBA team (Fase 0/7, caminho crítico).
-- Stack de observabilidade é single-node (sem HA) na POC.
-- `file_storage` (fila do Collector em disco, zero perda de dado em blip de
-  rede) ainda não implementado — Fase 3.
+**Implementado e validado:**
+
+- Transporte OTLP → gateway → Prometheus/Loki → Grafana (com dado real).
+- `zabbix.stats` (processos, preprocessing, hosts/items) via bridge ZBXD.
+- Host metrics (CPU/mem/disco/rede/load) por nó — com `zbx_node`/`zbx_role`
+  (via `resource_to_telemetry_conversion` no gateway; sem isso os `system_*`
+  colidiam entre nós).
+- Web: nginx (`stub_status`) + php-fpm (`php-fpm_exporter`).
+- PostgreSQL (`postgres_exporter`): status/replica, lag, conexões, TPS, cache hit.
+- Logs no Loki (zabbix/nginx/php/postgres), filtráveis por nó/origem.
+- Dashboards divididos (Overview + 5 detalhes) com drill-down.
+- Tratamento de HA de core (STANDBY ≠ DOWN) e detecção de nó caído (heartbeat).
+
+**Pendências:**
+
+- **Witness (pgpool/pgbouncer):** exporters prontos, mas dependem de liberar o
+  `zbx_observability_monitor` no `pool_hba.conf`/`pool_passwd` e `stats_users`.
+  Painéis do dashboard entram quando o exporter reportar.
+- **`zabbix-api-bridge.py`** (Fase 2): `zabbix[queue]`, `zabbix[proxy_buffer,*]`,
+  `zabbix[vps,written]` só via Zabbix API — precisa da URL + token de leitura.
+- **Alerting** (Fase 4): Alertmanager + regras preditivas (ex.: `pg_up == 0`,
+  fila crescendo). Canal de notificação a definir.
+- **`file_storage`** (Fase 3): fila do Collector em disco (zero perda em blip
+  de rede) ainda não implementada.
+- **Labels canônicos `dc`/`env`** (Fase 3): ainda não aplicados nos agentes.
+- **Logs do banco pobres:** dependem da DBA ligar `log_min_duration_statement`
+  etc. no PostgreSQL (a coleta já está pronta).
+- **Stack single-node:** o gateway (`sv-tools-dev02`) não tem HA — Fase 2.
+- **Retenção não dimensionada:** Prometheus 30d + Loki 30d contra disco não medido.
