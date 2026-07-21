@@ -82,10 +82,28 @@
       "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "stacking": { "mode": "none", "group": "A" } } }, "overrides": [] },
       "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "min"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
     },
-    { "id": 7, "type": "row", "title": "pgpool / pgbouncer (witness)", "gridPos": { "x": 0, "y": 24, "w": 24, "h": 1 }, "collapsed": false, "panels": [] },
+    {
+      "id": 9, "type": "timeseries", "title": "PostgreSQL - locks por modo",
+      "description": "pg_locks_count por modo. AccessShareLock alto e normal; picos de RowExclusive/Exclusive/AccessExclusive indicam contencao.",
+      "gridPos": { "x": 0, "y": 24, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum by (zbx_node, mode) (pg_locks_count{zbx_node=~\"$node\", zbx_node!=\"\"})", "refId": "A", "legendFormat": "{{zbx_node}} - {{mode}}" } ],
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "stacking": { "mode": "none", "group": "A" } } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    {
+      "id": 10, "type": "timeseries", "title": "PostgreSQL - deadlocks (por 5m)",
+      "description": "increase(pg_stat_database_deadlocks_total[5m]). Qualquer valor > 0 e um deadlock real - investigar a query/ordem de lock.",
+      "gridPos": { "x": 12, "y": 24, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum by (zbx_node) (increase(pg_stat_database_deadlocks_total{zbx_node=~\"$node\", zbx_node!=\"\", datname!~\"template.*\"}[5m]))", "refId": "A", "legendFormat": "{{zbx_node}}" } ],
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 20, "showPoints": "auto", "spanNulls": true, "stacking": { "mode": "none", "group": "A" }, "thresholdsStyle": { "mode": "line" } }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 1 } ] } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["sum", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    { "id": 7, "type": "row", "title": "pgpool / pgbouncer (witness)", "gridPos": { "x": 0, "y": 32, "w": 24, "h": 1 }, "collapsed": false, "panels": [] },
     {
       "id": 8, "type": "text", "title": "Pendente — witness",
-      "gridPos": { "x": 0, "y": 25, "w": 24, "h": 3 },
+      "gridPos": { "x": 0, "y": 33, "w": 24, "h": 3 },
       "options": { "mode": "markdown", "content": "Paineis de **pgpool** (`pgpool2_*`) e **pgbouncer** (`pgbouncer_*`) entram quando o exporter do witness reportar. Bloqueio atual: autorizar o `zbx_observability_monitor` no `pool_hba.conf`/`pool_passwd` (pgpool) e `stats_users` (pgbouncer). Ver `docs/deploy-hml.md`." }
     }
   ]
