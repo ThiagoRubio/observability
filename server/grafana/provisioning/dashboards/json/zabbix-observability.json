@@ -139,9 +139,18 @@
     {
       "id": 13, "type": "stat", "title": "php-fpm (up) por no",
       "description": "phpfpm_up por no web. Vermelho = php-fpm caido (mas no ainda reportando). Se o no inteiro cair, o tile some e vira heartbeat vermelho ao lado.",
-      "gridPos": { "x": 0, "y": 22, "w": 12, "h": 6 },
+      "gridPos": { "x": 0, "y": 22, "w": 6, "h": 8 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [ { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "max by (zbx_node) (phpfpm_up{zbx_node=~\"$node\", zbx_node!=\"\"})", "refId": "A", "instant": true, "legendFormat": "{{zbx_node}}" } ],
+      "fieldConfig": { "defaults": { "unit": "none", "mappings": [ { "type": "value", "options": { "0": { "text": "DOWN", "color": "red", "index": 0 }, "1": { "text": "UP", "color": "green", "index": 1 } } } ], "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": true }, "colorMode": "background", "graphMode": "none", "textMode": "value_and_name", "justifyMode": "auto" }
+    },
+    {
+      "id": 15, "type": "stat", "title": "nginx (up) por no",
+      "description": "nginx_up por no (via nginx-prometheus-exporter, le o stub_status). Vermelho = nginx caido.",
+      "gridPos": { "x": 6, "y": 22, "w": 6, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "max by (zbx_node) (nginx_up{zbx_node=~\"$node\", zbx_node!=\"\"})", "refId": "A", "instant": true, "legendFormat": "{{zbx_node}}" } ],
       "fieldConfig": { "defaults": { "unit": "none", "mappings": [ { "type": "value", "options": { "0": { "text": "DOWN", "color": "red", "index": 0 }, "1": { "text": "UP", "color": "green", "index": 1 } } } ], "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] } }, "overrides": [] },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": true }, "colorMode": "background", "graphMode": "none", "textMode": "value_and_name", "justifyMode": "auto" }
     },
