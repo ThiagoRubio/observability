@@ -6,6 +6,18 @@ receivers:
       http:
         endpoint: 0.0.0.0:4318
 
+  # Scrape da zabbix-api-bridge (itens internos via API). Feito aqui no gateway
+  # porque o container do Prometheus nao resolve nomes de container para scrape;
+  # o collector resolve (empurra pro prometheus/loki via nome). O dado flui via
+  # remote_write junto com o resto.
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: zabbix-api-bridge
+          scrape_interval: 60s
+          static_configs:
+            - targets: ["zbx-api-bridge:9099"]
+
 processors:
   memory_limiter:
     check_interval: 5s
@@ -36,7 +48,7 @@ service:
   extensions: [health_check]
   pipelines:
     metrics:
-      receivers: [otlp]
+      receivers: [otlp, prometheus]
       processors: [memory_limiter, batch]
       exporters: [prometheusremotewrite]
     logs:
