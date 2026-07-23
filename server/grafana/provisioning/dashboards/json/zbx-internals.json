@@ -52,10 +52,24 @@
       "fieldConfig": { "defaults": { "unit": "short", "min": 0, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "stacking": { "mode": "none", "group": "A" } } }, "overrides": [] },
       "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
     },
+    { "id": 7, "type": "row", "title": "Fila & throughput (Zabbix API)", "gridPos": { "x": 0, "y": 23, "w": 24, "h": 1 }, "collapsed": false, "panels": [] },
     {
-      "id": 7, "type": "text", "title": "Pendente Fase 2 (Zabbix API)",
-      "gridPos": { "x": 0, "y": 23, "w": 24, "h": 4 },
-      "options": { "mode": "markdown", "content": "**Fila / buffer / VPS** dependem do `zabbix-api-bridge.py` (Fase 2): `zabbix[queue]`, `zabbix[proxy_buffer,*]`, `zabbix[vps,written]` nao existem no protocolo `zabbix.stats`, so via Zabbix API." }
+      "id": 8, "type": "timeseries", "title": "Fila do Zabbix (queue)",
+      "description": "zabbix[queue] no host 'Zabbix server' (via API). Fila crescendo de forma sustentada e o principal preditor de incidente de coleta. Threshold e placeholder - ajuste ao seu ambiente.",
+      "gridPos": { "x": 0, "y": 24, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "zabbix_internal_item{key=\"zabbix[queue]\", host=\"Zabbix server\"}", "refId": "A", "legendFormat": "fila (total)" } ],
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 15, "showPoints": "never", "spanNulls": true, "stacking": { "mode": "none", "group": "A" }, "thresholdsStyle": { "mode": "line" } }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 1000 } ] } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    {
+      "id": 9, "type": "timeseries", "title": "VPS - valores gravados por segundo",
+      "description": "zabbix[vps,written] no host 'Zabbix server' - throughput real de escrita no banco.",
+      "gridPos": { "x": 12, "y": 24, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "zabbix_internal_item{key=\"zabbix[vps,written]\", host=\"Zabbix server\"}", "refId": "A", "legendFormat": "valores/s" } ],
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 15, "showPoints": "never", "spanNulls": true, "stacking": { "mode": "none", "group": "A" } } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
     }
   ]
 }

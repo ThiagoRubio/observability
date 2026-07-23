@@ -82,6 +82,23 @@ groups:
           summary: "Fila de preprocessing crescendo em {{ $labels.node }}"
           description: "Tendencia de crescimento sustentada ha 30m - coleta degradando."
 
+      # Fila do Zabbix via API (zabbix[queue]) - o preditor nº1 do design doc
+      - alert: ZabbixQueueGrowing
+        expr: deriv(zabbix_internal_item{key="zabbix[queue]", host="Zabbix server"}[15m]) > 0
+        for: 30m
+        labels: { severity: warning }
+        annotations:
+          summary: "Fila do Zabbix (queue) crescendo"
+          description: "zabbix[queue] com tendencia de crescimento sustentada ha 30m - coleta degradando antes de estourar."
+
+      - alert: ZabbixQueueHigh
+        expr: zabbix_internal_item{key="zabbix[queue]", host="Zabbix server"} > 1000
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Fila do Zabbix alta (queue > 1000)"
+          description: "zabbix[queue] = {{ $value }} ha 10m. Ajuste o limiar ao seu ambiente."
+
       # ---------------- Host / nos ----------------
       - alert: NodeNotReporting
         expr: time() - max by (zbx_node) (max_over_time(timestamp(system_cpu_load_average_1m)[15m:1m])) > 180

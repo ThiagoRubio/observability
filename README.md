@@ -209,16 +209,20 @@ locais. Export ao gateway é em lote e comprimido (banda baixa). O
 - Logs no Loki (zabbix/nginx/php/postgres), filtráveis por nó/origem.
 - Dashboards divididos (Overview + 5 detalhes) com drill-down.
 - Tratamento de HA de core (STANDBY ≠ DOWN) e detecção de nó caído (heartbeat).
+- Fila / VPS via Zabbix API (`zabbix-api-bridge`) — o preditor de coleta (Fase 2).
+- Alertmanager + regras preditivas (down de serviço, split-brain, fila crescendo,
+  nó silencioso) — notificação em modo **UI** por ora.
 
 **Pendências:**
 
 - **Witness (pgpool/pgbouncer):** exporters prontos, mas dependem de liberar o
   `zbx_observability_monitor` no `pool_hba.conf`/`pool_passwd` e `stats_users`.
   Painéis do dashboard entram quando o exporter reportar.
-- **`zabbix-api-bridge.py`** (Fase 2): `zabbix[queue]`, `zabbix[proxy_buffer,*]`,
-  `zabbix[vps,written]` só via Zabbix API — precisa da URL + token de leitura.
-- **Alerting** (Fase 4): Alertmanager + regras preditivas (ex.: `pg_up == 0`,
-  fila crescendo). Canal de notificação a definir.
+- **Canal de alerta:** o Alertmanager roda em modo **UI** (`:9093`); falta plugar
+  um receiver real (Teams/Slack/e-mail) — trocar o `receiver: null` no
+  `alertmanager.yml` e por o segredo fora do git.
+- **Proxy buffer via API:** os itens `zabbix[proxy_buffer,*]` entram no dashboard
+  quando confirmados por proxy (a bridge ja expoe o que existir).
 - **`file_storage`** (Fase 3): fila do Collector em disco (zero perda em blip
   de rede) ainda não implementada.
 - **Labels canônicos `dc`/`env`** (Fase 3): ainda não aplicados nos agentes.
