@@ -1,6 +1,8 @@
 # Segredos e configs locais - nunca commitar
 *.env
 .env.*
+# ...mas mantenha os templates de exemplo versionados
+!.env.example
 **/grafana-data/
 **/prometheus-data/
 **/loki-data/

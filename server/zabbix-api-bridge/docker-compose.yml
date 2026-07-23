@@ -1,0 +1,18 @@
+services:
+  zabbix-api-bridge:
+    image: python:3.12-slim
+    container_name: zbx-api-bridge
+    restart: unless-stopped
+    command: ["python3", "/app/zabbix-api-bridge.py"]
+    # URL e TOKEN vem do .env (fora do git). Ver .env.example.
+    env_file:
+      - ./.env
+    volumes:
+      - ./zabbix-api-bridge.py:/app/zabbix-api-bridge.py:ro
+    networks:
+      - zbx-observability-net
+    # Sem "ports": so o Prometheus (na rede) scrapeia zbx-api-bridge:9099
+
+networks:
+  zbx-observability-net:
+    external: true
