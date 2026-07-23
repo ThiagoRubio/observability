@@ -1,0 +1,108 @@
+groups:
+  - name: zabbix-observability
+    rules:
+      # ---------------- Banco (PostgreSQL) ----------------
+      - alert: PostgresDown
+        expr: pg_up == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "PostgreSQL fora em {{ $labels.zbx_node }}"
+          description: "pg_up == 0 ha 2m. Postgres caido ou exporter sem acesso."
+
+      - alert: PostgresSplitBrain
+        expr: count(pg_replication_is_replica == 0) > 1
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: "Mais de 1 PostgreSQL como primary (split-brain?)"
+          description: "{{ $value }} nos com pg_is_in_recovery=false. Num par HA deve haver 1 primary + replicas."
+
+      - alert: PostgresReplicationLagHigh
+        expr: pg_replication_lag_seconds > 30
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Lag de replicacao alto em {{ $labels.zbx_node }}"
+          description: "pg_replication_lag_seconds = {{ $value }}s ha 5m."
+
+      - alert: PostgresDeadlocks
+        expr: increase(pg_stat_database_deadlocks_total{datname!~"template.*"}[10m]) > 0
+        labels: { severity: warning }
+        annotations:
+          summary: "Deadlock em {{ $labels.zbx_node }} ({{ $labels.datname }})"
+          description: "{{ $value }} deadlock(s) nos ultimos 10m."
+
+      # ---------------- Web (nginx / php-fpm) ----------------
+      - alert: NginxDown
+        expr: nginx_up == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "nginx fora em {{ $labels.zbx_node }}"
+          description: "nginx_up == 0 ha 2m."
+
+      - alert: PhpFpmDown
+        expr: phpfpm_up == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "php-fpm fora em {{ $labels.zbx_node }}"
+          description: "phpfpm_up == 0 ha 2m."
+
+      - alert: PhpFpmMaxChildrenReached
+        expr: increase(phpfpm_max_children_reached_total[10m]) > 0
+        labels: { severity: warning }
+        annotations:
+          summary: "php-fpm atingiu pm.max_children em {{ $labels.zbx_node }}"
+          description: "Pool saturou {{ $value }}x nos ultimos 10m - aumentar max_children."
+
+      # ---------------- Zabbix ----------------
+      - alert: NoCoreActive
+        expr: max(zabbix_stats_bridge_up{role="core"}) == 0
+        for: 3m
+        labels: { severity: critical }
+        annotations:
+          summary: "Nenhum core Zabbix ativo"
+          description: "max(zabbix_stats_bridge_up{role=core}) == 0 ha 3m - nenhum core servindo stats (par HA fora)."
+
+      - alert: ProcessSaturating
+        expr: zabbix_process_busy_percent{state="busy", agg="avg"} > 75
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Processo {{ $labels.process }} saturando em {{ $labels.node }}"
+          description: "busy% = {{ $value }} ha 10m - esgotamento de worker."
+
+      - alert: PreprocessingQueueGrowing
+        expr: deriv(zabbix_preprocessing_queue[15m]) > 0
+        for: 30m
+        labels: { severity: warning }
+        annotations:
+          summary: "Fila de preprocessing crescendo em {{ $labels.node }}"
+          description: "Tendencia de crescimento sustentada ha 30m - coleta degradando."
+
+      # ---------------- Host / nos ----------------
+      - alert: NodeNotReporting
+        expr: time() - max by (zbx_node) (max_over_time(timestamp(system_cpu_load_average_1m)[15m:1m])) > 180
+        for: 1m
+        labels: { severity: critical }
+        annotations:
+          summary: "No {{ $labels.zbx_node }} parou de reportar"
+          description: "Sem hostmetrics ha >180s - no caido / rede / power."
+
+      - alert: HostCpuHigh
+        expr: 100 * (1 - avg by (zbx_node) (rate(system_cpu_time_seconds_total{state="idle"}[5m]))) > 90
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "CPU alto em {{ $labels.zbx_node }}"
+          description: "CPU > 90% ha 10m."
+
+      - alert: HostFilesystemFull
+        expr: 100 * sum by (zbx_node, mountpoint) (system_filesystem_usage_bytes{state="used", type!~"tmpfs|overlay|squashfs|fuse.*"}) / sum by (zbx_node, mountpoint) (system_filesystem_usage_bytes{type!~"tmpfs|overlay|squashfs|fuse.*"}) > 90
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Filesystem {{ $labels.mountpoint }} > 90% em {{ $labels.zbx_node }}"
+          description: "Uso de disco acima de 90% ha 5m."

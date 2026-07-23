@@ -1,0 +1,36 @@
+route:
+  receiver: 'null'
+  group_by: ['alertname', 'zbx_node', 'node']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - matchers: [ 'severity="critical"' ]
+      receiver: 'null'
+      group_wait: 10s
+      repeat_interval: 1h
+
+receivers:
+  # UI-only por enquanto: alertas aparecem na UI do Alertmanager (:9093),
+  # sem notificacao externa. Para plugar um canal, defina um receiver abaixo
+  # e aponte o route.receiver para ele. O segredo (webhook/senha) NUNCA no git
+  # (use env/secret ou um arquivo montado fora do repo).
+  - name: 'null'
+
+  # Exemplo Teams (descomentar e configurar):
+  # - name: 'teams'
+  #   webhook_configs:
+  #     - url: '<TEAMS_WEBHOOK_URL>'
+  #
+  # Exemplo Slack:
+  # - name: 'slack'
+  #   slack_configs:
+  #     - api_url: '<SLACK_WEBHOOK_URL>'
+  #       channel: '#alertas-zabbix'
+  #       send_resolved: true
+
+inhibit_rules:
+  # Se o no inteiro esta silencioso, nao floodar com os alertas dos servicos dele.
+  - source_matchers: [ 'alertname="NodeNotReporting"' ]
+    target_matchers: [ 'severity=~"warning|critical"' ]
+    equal: ['zbx_node']
